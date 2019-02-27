@@ -1,0 +1,5 @@
+Bundle-Name: r-studio
+Bundle-SymbolicName: r.studio
+Bundle-Version: 1.0.0
+Export-Package: r.studio.constants
+Web-ContextPath: /r-studio

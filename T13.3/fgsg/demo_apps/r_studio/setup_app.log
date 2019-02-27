@@ -1,0 +1,41 @@
+
+181026165034 Starting to setup application: r-studio
+181026165034 Executing: check_su_rights ... done
+181026165034 
+181026165034 ---------------------------------------
+181026165034  Action log: 'check_su_rights'
+181026165034 ---------------------------------------
+181026165034 
+181026165034 Check for su rights
+181026165034 
+181026165034 Executing: setup_docker_user ... done
+181026165034 
+181026165034 ---------------------------------------
+181026165034  Action log: 'setup_docker_user'
+181026165034 ---------------------------------------
+181026165034 
+181026165034 Setup docker user
+181026165034 Docker user already exists
+181026165034 APIServerDaemon container id: 308a29754dcb
+181026165034 Host already registered in apiserverdaemon
+181026165034 
+181026165034 Executing: install_fg_app ... done
+181026165035 
+181026165035 ---------------------------------------
+181026165035  Action log: 'install_fg_app'
+181026165035 ---------------------------------------
+181026165035 
+181026165035 Register the application on the FutureGateway
+181026165035 Identifying container for fgapiserver component
+181026165035 fgAPIServer container id: a68ea3d0d4fd
+181026165035 Checking APIs from IP: 172.18.0.3
+181026165035 Verifying if the ssh infrastructure duser@fgsg.ct.infn.it exists
+181026165035 The infrastructure 'duser@fgsg.ct.infn.it' exist, having id: '6'
+181026165035 Verifying the app already exists
+181026165035 Application 'r-studio' exists, having id: '5'
+181026165035 Checking files to upload
+181026165035 Retrieving path of 'pilot_script.sh' file with API command: 'curl -H "Authorization: Bearer XXX" -H "Content-Type: application/json" http://172.18.0.3/v1.0/applications/5/input 2>/dev/null | jq '.[].name + " " + .[].path' | grep pilot_script.sh | xargs echo | awk '{ print $2 }''
+181026165035 apps/5
+181026165035 File 'pilot_script.sh has been already uploaded, having path: 'apps/5/pilot_scipt.sh'
+181026165035 
+181026165035 Installation successully accomplished

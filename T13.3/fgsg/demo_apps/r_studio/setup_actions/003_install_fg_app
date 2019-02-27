@@ -1,0 +1,201 @@
+#!/bin/bash
+
+SHDESC="Register the application on the FutureGateway"
+DESC="R-Studio application has to be installed in the Futuregateway"
+
+find_fgapiserver() {
+  echo "Identifying container for fgapiserver component"
+  FGAPI_CONTAINER=$(docker ps | grep fgapiserver | awk '{ print $1 }')
+  [ "$FGAPI_CONTAINER" = "" ] && echo "It seems no docker container exists for fgapiserver component" && return 1
+  echo "fgAPIServer container id: $FGAPI_CONTAINER" &&\
+  FGAPI_IP=$(sudo docker inspect $FGAPI_CONTAINER |\
+             jq '.[].NetworkSettings.Networks' |\
+	     grep IPAddress |\
+	     awk '{ print $2 }' |\
+	     sed s/\"//g |\
+	     sed s/,//g)
+  [ "$FGAPI_IP" == "" ] && echo "No IP address is available from fgapiserver container: $FGAPI_CONTAINER" && return 1
+  echo "Checking APIs from IP: $FGAPI_IP"
+  FGAPI_RES=$(curl -H "Authorization: Bearer $FGAPI_TOKEN" http://$FGAPI_IP/v1.0/ 2>/dev/null)
+  [ "$FGAPI_RES" == "" ] && echo "No answer retrieved from fgapiserver API test" && return 1
+  return 0 
+}
+
+install_infrastructure() {
+  echo "Verifying if the ssh infrastructure $APP_INFRA_NAME exists"
+  INFRA_ID=$(curl -H "Authorization: Bearer $FGAPI_TOKEN"\
+             http://$FGAPI_IP/v1.0/infrastructures 2>/dev/null |\
+             jq '.infrastructures[]' |\
+             jq '.name + " " +.id' |\
+             grep $APP_INFRA_NAME |\
+	     xargs echo |\
+	     awk '{ print $2 }')
+  [ "$INFRA_ID" != "" ] &&\
+    echo "The infrastructure '$APP_INFRA_NAME' exist, having id: '$INFRA_ID'" && return 0
+  echo "The infrastructure '$APP_INFRA_NAME' does not exists, creating it"
+  echo "Creating infrastructure definition json file"
+  mktmp &&\
+  INFRA_JSON=$RES &&\
+  cat >$INFRA_JSON <<EOF
+{
+      "name": "${APP_INFRA_NAME}",
+      "virtual": false,
+      "enabled": true,
+      "parameters": [
+        {
+          "value": "ssh://$DOCKER_USER@$DOCKER_USER_HOST",
+          "name": "jobservice"
+        },
+        {
+          "value": "${DOCKER_USER}",
+          "name": "username"
+        },
+        {
+          "value": "${DOCKER_USER_PASS}",
+          "name": "password"
+        }
+      ],
+      "description": "${APP_INFRA_DESC}"
+    }
+EOF
+  [ ! -f $IFNRA_JSON ] && echo "Unable to create infrastructure definition json file" && return 1
+  mktmp
+  CMD_OUT=$RES
+  INFRA_SETUP_CMD="curl\
+                   -H \"Authorization: Bearer $FGAPI_TOKEN\"\
+	           -H \"Content-Type: application/json\"\
+	           -X POST\
+		   -d '"$(cat $INFRA_JSON)"'\
+	           http://$FGAPI_IP/v1.0/infrastructures 2>/dev/null" 
+  debugging && echo "Executing infrastructure setup API command: '$INFRA_SETUP_CMD'" 
+  eval "$INFRA_SETUP_CMD" | tee $CMD_OUT
+  INFRA_ID=$(cat $CMD_OUT | jq .id | xargs echo)
+  [ "$INFRA_ID" == "" ] && echo "Application was not successfully created" && return 1
+  echo "Verifying new infrastructure having id: $IFRA_ID"
+  INFRA_VIEW_CMD="curl\
+	          -H \"Authorization: Bearer $FGAPI_TOKEN\"\
+                  http://$FGAPI_IP/v1.0/infrastructures/$INFRA_ID 2>/dev/null"
+  eval "$INFRA_VIEW_CMD" | tee $CMD_OUT
+  return 0
+}
+
+install_application() {
+  echo "Verifying the app already exists"
+  APP_ID=$(curl -H "Authorization: Bearer $FGAPI_TOKEN"\
+	  http://$FGAPI_IP/v1.0/applications 2>/dev/null |\
+          jq '.applications[]' |\
+	  jq '.name + " " +.id' |\
+	  grep $APP_NAME |\
+	  xargs echo |\
+	  awk '{ print $2 }')
+  [ "$APP_ID" != "" ] && echo "Application '$APP_NAME' exists, having id: '$APP_ID'" && return 0
+  echo "Application '$APP_NAME' does not exists, intalling it"
+  echo "Installing $APP_NAME application"
+  mktmp &&\
+  APP_JSON=$RES &&\
+  cat >$APP_JSON <<EOF
+{
+  "outcome": "JOB",
+  "description": "${APP_NAME} application for fgsg",
+  "name": "${APP_NAME}",
+  "enabled": true,
+  "files": [ "pilot_script.sh" ],
+  "parameters": [
+    {
+      "description": "Application level Executor Interface",
+      "value": "GridEngine",
+      "name": "target_executor"
+    },
+    {
+      "description": "Executable to call",
+      "value": "/bin/bash",
+      "name": "jobdesc_executable"
+    },
+    {
+      "description": "Arguments for executable",
+      "value": "pilot_script.sh",
+      "name": "jobdesc_arguments"
+    },
+    {
+      "description": "Executable output file",
+      "value": "output.txt",
+      "name": "jobdesc_output"
+    },
+    {
+      "description": "Executable error file",
+      "value": "error.txt",
+      "name": "jobdesc_error"
+    }
+  ],
+  "infrastructures": [ "${INFRA_ID}" ]
+}
+EOF
+  [ ! -f $IFNRA_JSON ] && echo "Unable to create application definition json file" && return 1
+  mktmp
+  CMD_OUT=$RES
+  APP_SETUP_CMD="curl\
+	         -H \"Authorization: Bearer $FGAPI_TOKEN\"\
+                 -H \"Content-Type: application/json\"\
+                 -X POST\
+                 -d '"$(cat $APP_JSON)"'\
+                 http://$FGAPI_IP/v1.0/applications 2>/dev/null"
+  debugging && echo "Executing application setup API command: '$APP_SETUP_CMD'" 
+  eval "$APP_SETUP_CMD" | tee $CMD_OUT
+  APP_ID=$(cat $CMD_OUT | jq .id | xargs echo)
+  [ "$APP_ID" == "" ] && echo "Application '$APP_NAME' was not successfully created" && return 1
+  echo "Application '$APP_NAME' successfully created"
+  return 0
+}
+
+upload_files() {
+  mktmp
+  CMD_FILE_OUT=$RES
+  echo "Checking files to upload"
+  APP_FILE_PATH_CMD="curl\
+                     -H \"Authorization: Bearer $FGAPI_TOKEN\"\
+                     -H \"Content-Type: application/json\"\
+                     http://$FGAPI_IP/v1.0/applications/$APP_ID/input 2>/dev/null |\
+                     jq '.[].name + \" \" + .[].path' |\
+                     grep pilot_script.sh |\
+                     xargs echo |\
+                     awk '{ print \$2 }'"
+  debugging && echo "Retrieving path of 'pilot_script.sh' file with API command: '$APP_FILE_PATH_CMD'"
+  eval "$APP_FILE_PATH_CMD" | tee $CMD_FILE_OUT
+  APP_FILE_PATH=$(cat $CMD_FILE_OUT)
+  [ "$APP_FILE_PATH" != "" ] &&\
+    echo "File 'pilot_script.sh has been already uploaded, having path: '$APP_FILE_PATH/pilot_scipt.sh'" &&\
+    return 0
+  echo "Uploading application file 'pilot_script.sh'"
+  [ ! -f $APP_FILE_DIR/pilot_script.sh ] &&\
+    echo "Not foud necessary application file: '$APP_FILE_DIR/pilot_script.sh'" &&\
+    return 1
+  UPLOAD_APP_FILE_CMD="curl\
+                       -H \"Authorization: Bearer $FGAPI_TOKEN\"\
+                       -F 'file[]=@$APP_FILE_DIR/pilot_script.sh'\
+                       http://$FGAPI_IP/v1.0/applications/$APP_ID/input 2>/dev/null"
+  debugging && echo "Executing application file upload API command: '$UPLOAD_APP_FILE_CMD'"
+  echo "Verifying uploaded file: 'pilot_script.sh'"
+  eval "$UPLOAD_APP_FILE_CMD" | tee $CMD_FILE_OUT
+  APP_FILE_PATH=$(cat $CMD_FILE_OUT |\
+	          jq '.files[]' |\
+		  grep pilot_script.sh |\
+		  xargs echo)
+  [ "$APP_FILE_PATH" == "" ] &&\
+    echo "File 'pilot_script.sh' was not uploaded successfully" &&\
+    return 1
+  echo "File 'pilot_script.sh' uploaded successfully"
+  return 0
+}
+
+install_fg_app() {
+  echo "$SHDESC" &&\
+  find_fgapiserver &&\
+  install_infrastructure &&\
+  install_application &&\
+  upload_files
+  return 0 
+}
+
+# Installation step main script
+# It must have the same name of the file
+install_fg_app

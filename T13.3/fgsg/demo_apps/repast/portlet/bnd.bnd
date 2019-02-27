@@ -1,0 +1,5 @@
+Bundle-Name: repast
+Bundle-SymbolicName: repast
+Bundle-Version: 1.0.0
+Export-Package: repast.constants
+Web-ContextPath: /repast

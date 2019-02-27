@@ -1,0 +1,54 @@
+<?php
+
+function trmat_cron_mod_install() {
+  watchdog('trmat_cron_mod', 'Installing Training Material cron module');
+  if (!db_table_exists('trmat_cron_mod_nfy'))
+    drupal_install_schema('trmat_cron_mod');
+  variable_set('trmat_cron_mod_on', 0);
+  variable_set('trmat_cron_mod_verbose',1);
+  variable_set('trmat_cron_mod_mail_from','training@mailman.eosc-hub.eu');
+  variable_set('trmat_cron_mod_content_type_name','Training material');
+  variable_set('trmat_cron_mod_notify_elapse','150');
+  variable_set('trmat_cron_mod_min_allowed_interval','30');
+  variable_set('trmat_cron_mod_mail_notify',1);
+  variable_set('trmat_cron_mod_mail_notify_address','riccardo.bruno@ct.infn.it');
+  variable_set('trmat_cron_mod_mail_cc_list', 'riccardo.bruno@ct.infn.it, giuseppe.larocca@egi.eu');
+}
+
+function trmat_cron_mod_uninstall() {
+  watchdog('trmat_cron_mod', 'Uninstalling Training Material cron module');
+  if (db_table_exists('trmat_cron_mod_nfy'))
+    drupal_uninstall_schema('trmat_cron_mod');
+  variable_del('trmat_cron_mod_on');
+  variable_del('trmat_cron_mod_verbose');
+  variable_del('trmat_cron_mod_content_type_name');
+  variable_del('trmat_cron_mod_notify_elapse');
+  variable_del('trmat_cron_mod_min_allowed_interval');
+  variable_del('trmat_cron_mod_mail_notify');
+  variable_del('trmat_cron_mod_mail_notify_address');
+  variable_del('trmat_cron_mod_mail_cc_list');
+}
+
+function trmat_cron_mod_schema() {
+  $schema['trmat_cron_mod_nfy'] = array(
+    'description' => 'Stores notified training material records',
+    'fields' => array(
+      'tm_run' => array(
+        'description' => 'Cron extraction time',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'tm_nid' => array(
+        'description' => 'The training material node id',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+        'tm_uid' => array(
+          'description' => 'The content user id',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE)),
+    'primary key' => array('tm_run', 'tm_nid', 'tm_uid'),
+  );
+  return $schema;
+}

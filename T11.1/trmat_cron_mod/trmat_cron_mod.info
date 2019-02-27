@@ -1,0 +1,7 @@
+name = trmat_cron_mod
+description = "EOSC-hub Training Catalogue cron module, informs training material publishers to check the validity of their contents after a configurable training elapse"
+package = Administration 
+configure = admin/config/system/trmat_cron_mod
+core = 7.x
+files[] = trmat_cron_mod.module
+dependencies[] = smtp:smtp

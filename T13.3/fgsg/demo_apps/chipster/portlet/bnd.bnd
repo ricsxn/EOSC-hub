@@ -1,0 +1,5 @@
+Bundle-Name: chipster
+Bundle-SymbolicName: chipster
+Bundle-Version: 1.0.0
+Export-Package: chipster.constants
+Web-ContextPath: /chipster

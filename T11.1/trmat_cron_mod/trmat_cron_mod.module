@@ -1,0 +1,413 @@
+<?php
+
+function trmat_cron_mod_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#trmat_cron_mod':
+      return t('Inform training material publishers to check the validity of their inserted content.');
+  }
+}
+
+function trmat_cron_mod_menu() {
+  $items['admin/config/system/trmat_cron_mod'] = array(
+    'title'            => 'Training Material Cron Module',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('trmat_cron_mod_admin_settings'),
+    'access arguments' => array('administer trmat_cron_mod module'),
+    'description'      => 'Inform training material publishers to check the validity if their inserted content.',
+    'file'             => 'trmat_cron_mod.admin.inc',
+  );
+  return $items;
+}
+
+function trmat_cron_mod_permission() {
+  return array(
+    'administer trmat_cron_mod module' => array(
+      'title' => t('Administer Training Materials cron module.'),
+      'description' => t('Perform administration tasks for Training Materials cron module.'))
+  );
+}
+
+function trmat_cron_mod_mail($key, &$message, $params) {
+  switch ($key) {
+    case 'trmat_report':
+    case 'trmat_notify':
+      $message['headers'] = $params['headers'];
+      $message['subject'] = $params['subject'];
+      $message['body'][] = t($params['body']);
+      break;
+  }
+}
+
+function trmat_cron_mod_cron() {
+
+  // Do not start cron if not activated
+  $trmat_cron_mod_on = variable_get('trmat_cron_mod_on',0);
+  if($trmat_cron_mod_on == FALSE) {
+    wd_out("Training Materials cron module is not activeted, skipping execution.");
+    return;
+  }
+
+  // Below variables configure module behavior
+
+  // Cron module activation flag
+  $trmat_cron_mod_on = variable_get('trmat_cron_mod_on',0);
+  // Cron module mail 'from' address
+  $trmat_cron_mod_mail_from = variable_get('trmat_cron_mod_mail_from',
+	                                   'training@mailman.eosc-hub.eu');
+  // Cton module mailCC addresses
+  $trmat_cron_mod_mail_cc_list = variable_get('trmat_cron_mod_mail_cc_list',
+                                              'riccardo.bruno@ct.infn.it, giuseppe.larocca@ct.infn.it');
+  // Content type name
+  $trmat_cron_mod_content_type_name = variable_get('trmat_cron_mod_content_type_name',
+	                                           'Training material');
+  // Notify elapse is calculated in days 
+  $trmat_cron_mod_notify_elapse = variable_get('trmat_cron_mod_notify_elapse',150);
+  $notify_elapse = $trmat_cron_mod_notify_elapse * (24*3600); // transform in seconds
+  // Minimum allowed interval is calculated in days
+  // Time interval between last_run and end_ts cannot
+  // be less than the min_allowed_interval
+  // This rule avoids too many mails containing few
+  // training material records in their reporting
+  $trmat_cron_mod_min_allowed_interval = variable_get('trmat_cron_mod_min_allowed_interval',30);
+  $min_allowed_interval = $trmat_cron_mod_min_allowed_interval * (24*3600); // transform in seconds
+  // Nofify cron execution
+  $trmat_cron_mod_notify = variable_get('trmat_cron_mod_notify',TRUE);
+  $trmat_cron_mod_notify_address = variable_get('trmat_cron_mod_notify_address','riccardo.bruno@ct.infn.it');
+ 
+  // Calculate time intervals 
+  //
+  // Node check uses current dates subtracted by the 
+  // notify elapse time interval.
+  // 
+  //             +.........(ne)............+
+  //             |                |        |
+  //    +............(ne).........+        | 
+  //    |        |                |        |
+  //  --+--------+----------------+--------+
+  //   sd       ed                lr       rd
+  //
+  //    +......(mai).....+
+  //
+  //  ne  = notify_elapse
+  //  lr  = last run
+  //  rd  = run date
+  //  sd  = start date
+  //  ed  = end date
+  //  mai = minimum allowed interval
+  //
+  //  lr refers to the last registered run date
+  //     if no dates are registered yet, its  
+  //     value will be equal to zero and the
+  //     1st_time flag will be switched on.
+  //     When 1st_time flag is TRUE, the sd
+  //     will be set to 0, so that all 
+  //     content type records will be 
+  //     considered
+  //
+  //  In order to start notifications,
+  //  ed-sd must be greather or equal to mai.
+   
+  $last_cron_run = variable_get("cron_last");
+  $last_run = get_last_registered_run(); 
+  $run_date = date("U");
+  $start_ts = $last_run - $notify_elapse;
+  $end_ts = $run_date - $notify_elapse;
+  // 1st Time run means to check all inserted modules
+  $first_time_msg = 'false';
+  if($last_run == 0) {
+    $start_ts = 0;
+    $first_time_msg = 'true';
+  }
+  $check_interval = $end_ts - $start_ts;
+  $hr_last_run = date("F jS, Y", $last_run);
+  $hr_run_date = date("F jS, Y", $run_date);
+  $hr_start_ts = date("F jS, Y", $start_ts); 
+  $hr_end_ts = date("F jS, Y", $end_ts);
+
+  // Initialize notification message
+  $nofify_item = "";
+  $notify_message = "";
+  
+  // Cron execution running parameters
+  $trmat_cron_mod_notify_msg = 'false';
+  if($trmat_cron_mod_notify)
+    $trmat_cron_mod_notify_msg = 'true';
+
+  $notify_item = t(
+    "Starting Training Material cron module, " . "<br/>" .
+    "content_type: '$trmat_cron_mod_content_type_name', " . "<br/>" .
+    "notify_elapse (days): '$trmat_cron_mod_notify_elapse', " . "<br/>" .
+    "last_run: '$hr_last_run', " . "<br/>" .
+    "run_date: '$hr_run_date', " . "<br/>" .
+    "start_ts: '$hr_start_ts', " . "<br/>" .
+    "end_ts: '$hr_end_ts', " . "<br/>" .
+    "1st-time: '$first_time_msg', " . "<br/>" .
+    "minimum allowd interval (days): '$trmat_cron_mod_min_allowed_interval'" . "<br/>" .
+    "notify:'$trmat_cron_mod_notify_msg', " . "<br/>" .
+    "notify address: '$trmat_cron_mod_notify_address', " . "<br/>" .
+    "mail_from: '$trmat_cron_mod_mail_from'" . "<br/>" .
+    "mail_cc_list: '$trmat_cron_mod_mail_cc_list'" . "<br/>"); 
+  wd_out($notify_item);
+  $notify_message .= "$notify_item<br/>";
+
+  // Check if  min_allowed interval rule is satisfied
+  if($check_interval < $min_allowed_interval) {
+    $needed_interval = intval((($last_run+$min_allowed_interval)-$run_date)/(24*3600));
+    $foreseen_date = date("F jS, Y", $last_run+$min_allowed_interval);
+    $notify_item = t(
+      "The minimum allowed interval is not yet satisfied, " .
+      "missing: '$needed_interval' days. " .
+      "Foreseen check date is: '$foreseen_date'.");
+    wd_out($notify_item);
+    $notify_message .= "$notify_item <br/>";
+  }  
+  else {
+    // Execution Statistics
+    $num_users = 0;
+    $num_records = 0;
+
+    // Retrieve the type value in node table from nodetype name
+    $node_type = get_node_type($trmat_cron_mod_content_type_name);
+
+    // Get the list of users and mail addresses matching selection criteria
+    $users = selected_users($node_type, $start_ts, $end_ts);
+    foreach($users as $user) {
+
+      // WD report
+      $uid = $user->uid;
+      $mail = $user->mail;
+      $notify_item = t("User uid: $uid, mail: $mail");
+      wd_out($notify_item);
+      $notify_message .= "$notify_item<br/>";
+
+      // Update statistics
+      $num_users++;
+   
+      // Extract selected node records
+      $detailed_list = Array();
+      $user_record_count = 0;
+      $user_records = select_user_records($uid, $node_type, $start_ts, $end_ts);
+      foreach($user_records as $user_record) {
+
+        // WD report        
+        $hr_created = date("F jS, Y", $user_record->created);
+        $hr_changed = date("F jS, Y", $user_record->changed); 
+        $notify_item = t(
+          "User record nid: '$user_record->nid', " .
+          "title: '$user_record->title', " .
+          "created: '$hr_created', " .
+          "changed: '$hr_changed'");
+        wd_out($notify_item);
+        $notify_message .= "$notify_item<br/>";
+      
+        // Update list of records
+        $detailed_list[$user_record_count] = Array(
+          'uid' => $uid,
+          'nid' => $user_record->nid,
+          'title' => $user_record->title,
+          'created' => $hr_created,
+          'changed' => $hr_changed);
+
+        // Update statistics
+        $num_records++;
+        $user_record_count++;
+      }
+      
+      // Send mail
+      send_user_mail($mail,
+                     $trmat_cron_mod_mail_from,
+                     $trmat_cron_mod_mail_cc_list,
+                     $detailed_list);
+
+      // Register reported records
+      register_records($run_date, $detailed_list);
+    }
+
+    // Cron statistics
+    $notify_item = t(
+      "Processed $num_users users and $num_records records");
+    wd_out($notify_item);
+    $notify_message .= "$notify_item<br/>";
+  }
+
+  // notify cron  execution
+  notify_execution($trmat_cron_mod_notify,
+                   $trmat_cron_mod_notify_address,
+                   $trmat_cron_mod_mail_from,
+                   $notify_message); 
+}
+
+function notify_execution($notify_flag, $notify_address, $mail_from, $notify_message) {
+  if($notify_flag != TRUE)
+    return;
+
+  // Prepare data
+  $mail_hdrs = array(
+      'Sender' => $mail_from,
+      'Return-Path' => $mail_from,
+      'From' => $mail_from,
+      'Reply-To' => $mail_from,
+      'MIME-Version' => '1.0',
+      'Content-Type' => 'text/html; charset=UTF-8; format=flowed;',
+  );
+  $mail_subj = t("EOSC-hub Training Catalogue, training material cron report");
+  $mail_body = t("<html><body>" .
+	         "<p>This is an automated message from EOSC-hub Training Catalogue.<br/>" .
+                 "This message informs you about the last execution of training material cron module.</p> " .
+                 "<p>Below the execution report:<br/>" . 
+		 $notify_message .
+		 "<p>Best regards,<br/>" .
+		 "The Training Catalogue administrator.</p>" .
+		 "</p></body></html>");
+ 
+  // Send email usign drupal mail hook
+  $mail_params = array(
+        'headers' => $mail_hdrs,
+        'subject' => $mail_subj,
+	'body' => $mail_body,
+  );
+  drupal_mail('trmat_cron_mod', 'trmat_notify', $notify_address, language_default(), $mail_params, $mail_from);
+
+  // Report activity
+  wd_out("To: '$notify_address', Mail body: '$mail_body'");
+}
+
+function get_last_registered_run() {
+  $reg_run_date = db_query(
+    "select distinct max(tm_run) from {trmat_cron_mod_nfy};",
+    Array())->fetchField();
+  if($reg_run_date == '') {
+    $reg_run_date = 0;
+  }
+  return $reg_run_date;
+}
+
+function register_records($run_date, $detailed_list) {
+
+  // Insert run_date, uid and nid
+  foreach($detailed_list as $list_record) {
+    $doc_uid = $list_record['uid'];
+    $doc_nid = $list_record['nid'];
+
+    // Insert run_date, uid and nid in trmat_cron_mod_nfy
+    $query = db_query(
+      "insert into {trmat_cron_mod_nfy} (tm_run, tm_uid, tm_nid) " .
+      "values (:run_date, :doc_uid, :doc_nid);",
+      Array(":run_date" => $run_date,
+            ":doc_uid" => $doc_uid,
+	    ":doc_nid" => $doc_nid));
+
+    // Update changed field in node record for further daemon run
+    $query = db_query(
+      "update {node} set changed=:run_date where nid = :nid;",
+      Array(":nid" => $doc_nid,
+            ":run_date" => $run_date));
+    
+    wd_out("Registered run_date: '$run_date', uid: '$doc_uid', nid: '$doc_nid'");
+  }
+}
+
+function send_user_mail($mail, $mail_from, $mail_cc_list, $detailed_list) {
+  global $base_root;
+
+  // Initialize the mail document detailed list
+  $detailed_doc_list = "";
+
+  // Prepare detailed list to report
+  foreach($detailed_list as $list_record) {
+    $doc_nid = $list_record['nid'];
+    $doc_title = $list_record['title'];
+    $doc_created = $list_record['created'];
+    $doc_changed = $list_record['changed'];
+    $doc_link = l(t($doc_title), $base_root . "/node/$doc_nid"); 
+    $detailed_doc_list .= t("<tr><td>$doc_link</td>" .
+                            "<td>$doc_created</td>" .
+		            "<td>$doc_changed</td></tr>");
+  }
+
+  // Prepare correct CC list, trimming values in the comma separated list
+  $mail_cc_array=explode(',',$mail_cc_list);
+  foreach($mail_cc_array as &$mail_cc)
+      $mail_cc=trim($mail_cc);
+
+  // Prepare mail data
+  $mail_hdrs = array(
+      'Sender' => $mail_from,
+      'Return-Path' => $mail_from,
+      'From' => $mail_from,
+      'Reply-To' => $mail_from,
+      'MIME-Version' => '1.0',
+      'Content-Type' => 'text/html; charset=UTF-8; format=flowed;',
+      'Cc' => implode(",", $mail_cc_array),
+  );
+  $mail_subj = t("EOSC-hub Training Catalogue, training materials reminder");
+  $mail_body = t("<html><body>" .
+	         "<p>You are receiving this automated message from EOSC-hub Training Catalogue.<br/>" .
+                 "This message kinldy reminds you to check the validity of the follwing " .
+                 "training materials you have inserted, in the catalogue.</p>" .
+                 "<p>Below detailed list of inserted records:<br/>" . 
+	         "<table><th>Document</th><th>Created</th><th>Changed</th></tr>" .
+	         $detailed_doc_list .
+		 "</table></p>" .
+		 "<p>Best regards,<br/>" .
+		 "The Training Catalogue Administrator.</p>" .
+		 "</body></html>");
+ 
+  // Send email usign drupal mail hook
+  $mail_params = array(
+        'headers' => $mail_hdrs,
+        'subject' => $mail_subj,
+        'body' => $mail_body,
+   );
+   drupal_mail('trmat_cron_mod', 'trmat_report', $mail, language_default(), $mail_params, $mail_from);
+ 
+  // Report activity
+  wd_out("To: '$mail', Mail body: '$mail_body'");
+}
+
+function wd_out($message) {
+  $trmat_cron_mod_verbose = variable_get('trmat_cron_mod_verbose',1); 
+  if($trmat_cron_mod_verbose)
+    watchdog('trmat_cron_mod', $message);
+}
+
+function get_node_type($type_name) {
+
+  return db_query(
+    "select type from node_type where name = :type_name;",
+    Array(':type_name' => $type_name))->fetchField();
+}
+
+function selected_users($node_type, $start_ts, $end_ts) {
+  $query = db_query(
+    "select distinct {users}.uid, {users}.mail " .
+    "from {node}, " .
+    "     {users} " .  
+    "where {node}.type = :node_type ".
+    "  and {users}.uid = {node}.uid " .
+    "  and {node}.changed >= :start_ts " .
+    "  and {node}.changed < :end_ts " .
+    "order by 1 asc;",
+    array(':node_type' => $node_type,
+          ':start_ts' => $start_ts,
+          ':end_ts' => $end_ts));
+  return $query;
+}
+
+function select_user_records($uid, $node_type, $start_ts, $end_ts) {
+  $query = db_query(
+    "select {node}.nid, {node}.title, {node}.created, {node}.changed " .
+    "from {node}, " .
+    "     {users} " .  
+    "where {users}.uid = :user_id " .
+    "  and {node}.type = :node_type " .
+    "  and {users}.uid = {node}.uid " .
+    "  and {node}.changed >= :start_ts " .
+    "  and {node}.changed < :end_ts " .
+    "order by {node}.created desc;",
+    array(':node_type' => $node_type,
+          ':user_id' => $uid,
+          ':start_ts' => $start_ts,
+          ':end_ts' => $end_ts));
+  return $query;
+}
