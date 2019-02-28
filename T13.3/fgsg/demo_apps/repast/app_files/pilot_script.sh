@@ -67,7 +67,7 @@ prepare_params() {
 	REPAST_VOLUME_ARGUMENT="-v ${REPAST_CONTAINER_NAME}:${REPAST_VOLUME_PATH}" ||\
 	REPAST_VOLUME_ARGUMENT=""
     # Prepare FTP_OUPUTDIR
-    FTP_OUTPUTDIR=$(dirname $PARAM_XML | sed s/http/ftp/ | sed s/input$/outuput/)"/"
+    FTP_OUTPUTDIR=$(dirname $PARAM_XML | sed s/http/ftp/ | sed s/input$/output/)"/"
 }
 
 execute_repast() {
