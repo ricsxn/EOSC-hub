@@ -66,19 +66,21 @@ prepare_params() {
 	echo "PARAM_XML file argument: $PARAM_XML" &&\
 	REPAST_VOLUME_ARGUMENT="-v ${REPAST_CONTAINER_NAME}:${REPAST_VOLUME_PATH}" ||\
 	REPAST_VOLUME_ARGUMENT=""
+    # Prepare FTP_OUPUTDIR
+    FTP_OUTPUTDIR=$(dirname $PARAM_XML | sed s/http/ftp/ | sed s/input$/outuput/)"/"
 }
 
 execute_repast() {
     UUID=$(cat /proc/sys/kernel/random/uuid)
     docker run --rm\
-	       --name $REPAST_CONTAINER_NAME\
-	       $REPAST_VOLUME_ARGUMENT\
-	       $REPAST_IMAGE\
-	       $REPAST_EXEC "$FTP_USER"\
-	                    "$FTP_PASSWORD"\
-			    "ftp://$FTP_HOST/$REPASST_OUTPUT/"\
-			    "$MODEL_URL"\
-			    "$PARAM_XML"
+      --name $REPAST_CONTAINER_NAME\
+             $REPAST_VOLUME_ARGUMENT\
+             $REPAST_IMAGE\
+             $REPAST_EXEC "$FTP_USER"\
+                          "$FTP_PASSWORD"\
+                          "$FTP_OUTPUTDIR"\
+                          "$MODEL_URL"\
+                          "$PARAM_XML"
     # If the volume is present, remove it
     [ "$REPAST_VOLUME_ARGUMENT" != "" ] &&\
         docker volume rm $REPAST_CONTAINER_NAME &&\
