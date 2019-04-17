@@ -119,13 +119,11 @@ function password_rules_fails() {
     re1 = /[a-z]/;
     re2 = /[A-Z]/;
     re3 = /[0-9]/;
-    re4 = /[!@#$%^£&*(),.?"{}|<>]/;
-    re5 = /[!@#$%^£&*()_+\-=\[\]{};'"\\|,.<>\/?][!@#$%^£&*()_+\-=\[\]{};'"\\|,.<>\/?]/;
+    re4 = /[!@#$%^£*()_+\-=\[\]{};'"\\|,.<>\/?][!@#$%^£*()_+\-=\[\]{};'"\\|,.<>\/?]/;
     return !(re1.test(password) &&
              re2.test(password) &&
              re3.test(password) &&
              re4.test(password) &&
-             re5.test(password) &&
              password.length > 7);
 }
 
@@ -390,7 +388,7 @@ function build_submission_form() {
         "<ul><li>At least <b>one letter</b></li>" +
         "    <li>At least <b>one capital letter</b>" +
         "    <li>At least <b>one number</b>" +
-        "    <li>At leatt <b>two special characters, except the ':' character</b>" +
+        "    <li>At leatt <b>two special characters, except the ':' and '&' characters</b>" +
         "    <li>At least <b>eight characters long</b></p>";
     $(".submission_form").append(
       "<div class=\"modal fade\" id=\"info_pass_modal\" tabindex=\"-1\" role=\"dialog\" style=\"display: none;\">" +
@@ -630,3 +628,4 @@ function doDelete(url, successFunction, failureFunction) {
 export default function(rootElementId) {
   $(`#${rootElementId}`).html(build_page());
 }
+
