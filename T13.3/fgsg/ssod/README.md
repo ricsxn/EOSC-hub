@@ -1,5 +1,6 @@
 # Science Software on Demand
-The Science Software on Demand is and EGI service using the FG as Science Gateway Engine.
+The Science Software on Demand is an EGI service using the FutureGateway as Science Gateway Engine.
+WARNING: This repository is has been abandoned, its reference still exists to keep note about the necessary steps to assign a public IP address to a Docker container.
 
 # Network configuration
 The SSOD service has to be accessible by the URL fgsg.egi.eu
