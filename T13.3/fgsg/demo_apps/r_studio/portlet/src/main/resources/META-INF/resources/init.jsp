@@ -94,9 +94,9 @@
                     fgAPIs.setBaselineToken(portletAccessToken);
                     String[] userGroups = { appGroup };
                     userGroup = fgAPIs.addUserGroups(screenName, userGroups);
-                    fgAPIs.setBaselineToken(delegatedAccessToken);
                 }
             } else {
+	        errMessage = "User does not have the necessary EGI marketplace access rights to run this application";
                 if(userGroup) {
 		    fgAPIs.setBaselineToken(portletAccessToken);
 		    // Eventually consider allocated apps
@@ -104,9 +104,9 @@
                     // Revoke user to the application group if registered
                     String[] userGroups = { appGroup };
                     fgAPIs.deleteUserGroups(screenName, userGroups);
-                    fgAPIs.setBaselineToken(delegatedAccessToken);
                 }
             }
+	    fgAPIs.setBaselineToken(delegatedAccessToken);
         }
     }
     // The GUI interface has now enough information to perform next activitis
@@ -117,7 +117,6 @@
 
   // Collect user account info into FG user info
   var fg_user_info = {
-    id: null,
     name: '<%= screenName %>',
     first_name: '<%= firstName %>',
     last_name: '<%= lastName %>',

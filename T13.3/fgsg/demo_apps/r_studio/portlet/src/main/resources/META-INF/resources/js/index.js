@@ -15,55 +15,67 @@
  *****************************************************************************/
 import $ from 'jquery';
 
-var applicationName = 'r-studio';
+var application_name = 'r-studio';
 var applicationId = 5;
+var welcomeText = 
+  "<center><img src=\"/egissod/documents/51171/0/r-studio.png/4d7a4665-c7d6-236c-4ad6-06dafd6ee14e?t=1556114610924\"" +
+  "     width=\"500\"/></center>" +
+  "<p>This application instantiate an R-Studio platform reserved " +
+  "portal users.</p>";
+
+function generic_error(message) {
+  mail_subject = "User support for application: " + application_name;
+  mail_body = "I would like to be contacted in order to get access or " +
+              "receive more information about the application: '" + application_name +
+              "'.\nMany thanks,\nRegards\n" + "<your name>";
+  html = "<div class=\"alert alert-danger\" role=\"alert\">" +
+         "  <button type=\"button\"" +
+         "          class=\"close\"" +
+         "          data-dismiss=\"alert\">&times;</button>" +
+         "  <strong>Warning!</strong> " + 
+         "  <p>" + message + "</p>" +
+	 "</div>" +
+         "<div class=\"disclaimer\">" + 
+         "<p>Please contact the <a href=\"" + user_support +
+         "?subject=" + mail_subject + "&body=" + mail_body + 
+         "\">user support</a> to get information and instructions " +
+         "about the access to this application." +
+         "</p></div>";
+  return html;
+}
 
 function build_page() {
   var html = "";
   if(themeDisplay.isSignedIn()) {
       // init call may report errors to be notified
       if(fg_user_info.err_message.length>0) {
-          html = "<div class=\"error\"><p>" +
-                 "<b>ERROR</b> " +
-                 "Unable to retrieve information for user: '" +
-                 fg_user_info.name + "'; error: '" +
-                 fg_user_info.err_message +
-             "'</p>";
-          return html;
-      }
-
-      // Performs a cascading check on user, app and task
-      // adding dynamically elements into the web pages
-      // accordingly to the FG API calls performed
-      check_user_app_task();
-      
-      // Below the structure of the page containing elemennts:
-      //   * User info
-      //   * Application info
-      //   * Task info ans its output
-      html = "<div class=\"application\">" +
-             "<p>This application instantiate an R-Studio platform reserved " +
-             "for portal users.</p>" +
-             "<div class=\"user_info\"></div>" +
-             "<div class=\"app_info\"></div>" +
-             "<div class=\"task_info\"></div>" +
-             "<div class=\"task_files\"></div>" +
-             "<div class=\"app_data\"></div>" +
-             "<div class=\"error\"></div>" +
-             "</div>";
+        html = generic_error("Backend error reporting: '" + fg_user_info.err_message + "'.");
+      } else {
+        // Below the structure of the page containing elemennts:
+        //   * User info
+        //   * Application info
+        //   * Task info ans its output
+        html = 
+          "<div style=\"background-color:white; " +
+          "             padding-top: 10px; padding-right: 10px; " +
+          "             padding-bottom: 10px; padding-left: 10px\"" +
+          "     class=\"" + application_name + "\">" +
+          "<p>" + welcomeText + "</p>" +
+          "<div class=\"user_info\"></div>" +
+          "<div class=\"app_info\"></div>" +
+          "<div class=\"task_info\"></div>" +
+          "<div class=\"task_files\"></div>" +
+          "<div class=\"app_data\"></div>" +
+          "<div class=\"error\"></div>" +
+          "</div>";
+        // Performs a cascading check on user, app and task
+        // adding dynamically elements into the web pages
+        // accordingly to the FG API calls performed
+        check_user_app_task();
+    }
   } else {
       // Notify that this service is available only for logged users
-      html = "<div class=\"alert\">" +
-             "  <button type=\"button\"" +
-             "          class=\"close\"" +
-             "          data-dismiss=\"alert\">&times;</button>" +
-             "  <strong>Warning!</strong> " + 
-             "You have to sign-in to access this service." +
-             "</div>" +
-             "<div class=\"disclaimer\">" + 
-             "<p>RStudio service access area, please contact the " +
-             "science gateway administrator to get information and support" +
-             " about this application.</p></div>";
+      html = generic_error("You have to sign-in to access this service.");
   }
   return html;
 }
@@ -97,9 +109,9 @@ function reportError(message, support_url) {
 
 function taskRefreshButton(hasArgs) {
     if(hasArgs) {
-        message = "A task releasing the '" + applicationName + "' application is executing."
+        message = "A task releasing the '" + application_name + "' application is executing."
     } else {
-        message = "A task allocating application '" + applicationName + "' is executing."
+        message = "A task allocating application '" + application_name + "' is executing."
     }
     $('.task_info').append(
         "<div class=\"refresh\">" +
@@ -116,7 +128,7 @@ function taskRefreshButton(hasArgs) {
 // Refresh button
 var refreshPage = function() {
     resetAreas("task_info"); 
-    check_task(applicationName);
+    check_task(application_name);
 }
 
 // Successful submission case 'SUBMIT'
@@ -154,13 +166,13 @@ var submitTask = function() {
     // Determine submit action type
     sub_button = $('#submit_button').text();
     if(sub_button == 'DELETE') {
-        actionMessage = "Are you sure to delete resources allocated for application: '" + applicationName + "'?";
+        actionMessage = "Are you sure to delete resources allocated for application: '" + application_name + "'?";
         actionType = doDelRes;
     } else if (sub_button == 'SUBMIT') {
-        actionMessage = "Do you really want to allocate resources for application: '" + applicationName + "'?";
+        actionMessage = "Do you really want to allocate resources for application: '" + application_name + "'?";
         actionType = doSubmit;
     } else if (sub_button == 'RETRY') {
-        actionMessage = "Do you really want to retry submisison for application: '" + applicationName + "'?";
+        actionMessage = "Do you really want to retry submisison for application: '" + application_name + "'?";
         actionType = doDelSubmit;
     }else {
         alert("Hey! This should never happen!");
@@ -275,7 +287,7 @@ var procAppOutput = function(data) {
     var rstudio_user = data[0]['Config']['Env'][0].split("=")[1];
     var rstudio_pass = data[0]['Config']['Env'][1].split("=")[1];
     $('.app_data').append(
-        "<b>RStudio instance</b><br/>" +
+        "<b>Running R-Studio instance</b><br/>" +
         "<p>You can try to access the r-studio instance by clicking " +
         "<a href=\"" + rstudio_host + "\" target=\"_blank\">here</a>. " +
         "Credentials to access the machine are:<table class=\"table-responsive\">" +
@@ -362,7 +374,7 @@ function get_task_info(task_id) {
 var no_app_task = function() {
     $('.task_info').append(
        "<p>It seems you don't have yet a running task for '" +
-       applicationName + "' application. " +
+       application_name + "' application. " +
        "Please press the submit button to execute the application." +
        "<div class=\"submit\"><button type=\"button\"" +
        "        id=\"submit_button\"" +
@@ -405,7 +417,7 @@ var procTask = function(data) {
 var procTaskError = function(jqXHR, exception) {
     resetAreas(".task_info");
     reportError("Error retrieving task information for '" +
-                applicationName + "' application. ",
+                application_name + "' application. ",
                 user_support);
 }
 
@@ -428,10 +440,10 @@ var procApp = function(data) {
         };
         $('.app_info').data('app_info',app_info)
         // Application data recovered, now check the task
-        check_task(applicationName);
+        check_task(application_name);
     } else {
         resetAreas(".app_info");
-        reportError("It seems the application '" + applicationName +
+        reportError("It seems the application '" + application_name +
                     "' is not registered in FutureGateway. ",
                 user_support);        
     }
@@ -440,10 +452,10 @@ var procApp = function(data) {
 //Error case for check_app
 var procAppError = function(jqXHR, exception) {
     resetAreas(".app_info");
-    reportError("Error retriving '" + applicationName + "' application " +
+    reportError("Error retriving '" + application_name + "' application " +
                 "information from FutureGateway. Please ensure your " +
 	        "membership has the necessary rights to instantiate '" +
-	        applicationName + "' application.",
+	        application_name + "' application.",
                 user_support);
 }
 
@@ -470,7 +482,7 @@ var procUserAppTask = function(data) {
         };
         $('.user_info').data('user_info',user_info);
         // User information recovered, it is possible to check the app.
-        check_app(applicationName);
+        check_app(application_name);
     } else {
         resetAreas(".user_info");
         reportError("It seems you are not yet registered as " +
