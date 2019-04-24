@@ -15,8 +15,8 @@
 <%
     // FG settings
     String fgUser = "futuregateway";
-    String fgPassword = "<futuregateway_password>";
-    String fgBaseUrl = "http://fgsg.ct.infn.it/fgapiserver";
+    String fgPassword = "futuregateway";
+    String fgBaseUrl = "http://fgapiserver";
     String fgAPIVer = "v1.0";
     boolean fgStatus = false;
     String errMessage = "";

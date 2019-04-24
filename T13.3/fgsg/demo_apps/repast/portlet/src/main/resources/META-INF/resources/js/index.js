@@ -2,8 +2,8 @@ import $ from 'jquery';
 
 var application_name = 'repast';
 var application_id = 6;
-var ftp_host = '<ftp_host>';
-var ftp_path = '<ftp_path>';
+var ftp_host = 'jobserver2.hopto.org';
+var ftp_path = 'repast/PALMS';
 var default_model_url = 'http://' + ftp_host + '/' + ftp_path + '/model.tar';
 var default_parameters_url = 'http://' + ftp_host + '/' + ftp_path + '/input/batch_params.xml_0';
 var welcomeText = "The <a href=\"https://repast.github.io\">" + application_name + "</a> application, is a free and open source agent-based modeling toolkit that offers users a rich variety of features. In this area it is possible to execute a given model with a given set of parameters, for the (PALMS) experiment.";
