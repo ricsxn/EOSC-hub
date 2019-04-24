@@ -50,17 +50,21 @@ public class EGIAAIAPIs {
 	public boolean verifySub(String sub) {
             errFlag = false;
             JSONObject apiData = doGet(APIURL + "/VoMembers/" + sub);
-            return apiData.getString("status").equals("Active");
+            return apiData != null &&
+		   apiData.has("status") &&
+		   apiData.getString("status").equals("Active");
 	}
 
 	private JSONObject doGet(String url) {
             JSONObject jsonObj = null;
+	    _log.debug("GET: '" + url + "'");
             try {
                 URL obj = new URL(url);
                 HttpURLConnection conn = (HttpURLConnection) obj.openConnection();
                 conn.setConnectTimeout(15000);
                 conn.setRequestMethod("GET");	
                 conn.setDoOutput(true);
+		_log.debug("Authorization: Basic " + encodeCredentials());
                 conn.setRequestProperty("Authorization", "Basic " + encodeCredentials());
                 conn.setRequestProperty("Content-Type", "application/json;charset=utf-8");
                 int responseCode = conn.getResponseCode();

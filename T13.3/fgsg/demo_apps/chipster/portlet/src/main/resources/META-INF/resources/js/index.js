@@ -16,61 +16,140 @@
 import $ from 'jquery';
 
 var application_name = 'chipster';
-var welcomeText = "This application manages remote chipster user accounts. " +
-	          "The password must satisfy specific password rules, that " +
-	          "you can see, by pressing the information button, beside " +
-	          "the password confirmation text. At the end of the password " +
-	          "input text, you can check if the password satisfies the rules " +
-	          "when a checker icon appears instead of a cross.";
-var default_username = '';
-var default_password = '';
+var welcomeText = 
+  "<img src=\"/egissod/documents/51171/0/chipster_image.png/e3a12473-63f8-656d-8ec4-cfa9404d5207?t=1556113400645\"" +
+  "     width=\"100%\"/>" +
+  "<p>This page allows members of the Applications on Demand Infrastructure " +
+  "to create a temporary user accounts to a Chipster data analysis server, " +
+  "running in the EGI Federated Cloud.</p>";
+  "<p>In case you do not have yet the necessary " +
+  "credentials to access Chipster application, a web form will " +
+  "prompt you to setup your own username and password pair. "
+  "The username will be the same of the portal user account " +
+  "and once the credentials will be correcty generated, " +
+  "it will be possible to access the Chipster application. " +
+  "It will be also possible to reset credentials anytime or " +
+	          "because they got expired.</p>";
+var launch_chipster = 
+	"<table id=\"launch_chipster\"" +
+        "       name=\"launch_chipster\"" +
+	"       bgcolor=\"#E8EDF1\"" +
+	"       border=\"0\"" +
+	"       cellpadding=\"1\"" +
+	"       cellspacing=\"1\"" +
+	"       style=\"width: 400px;\">" +
+	"<tbody>" +
+	"<tr><td rowspan=\"3\">" +
+	"    <img alt=\"\"" +
+	"         src=\"/egissod/documents/51171/0/launch_button-3.png/ea9ab2a0-c5a1-c9cd-930b-085209bfd816?t=1555687623683\"" +
+	"         style=\"font-size: 14px; line-height: 19px; width: 46px; height: 50px;\">" +
+	"    </td>" +
+	"    <td><a href=\"http://193.144.35.160:8081/chipster.jnlp\"" +
+	"        style=\"color: rgb(79, 133, 195); font-size: 14px; line-height: 19px;\">" +
+	"        Launch Chipster</a>" +
+	"    </td>" +
+	"</tr>" +
+	"<tr><td>" +
+	"    <font face=\"sans-serif\">" +
+	"    <span style=\"font-size: 11px; line-height: 19px;\">or launch with more memory: <a" +
+	"    href=\"http://193.144.35.151:8081/servlet.jnlp?memory=3072\">3GB</a> or <a" +
+	"    href=\"http://193.144.35.151:8081/servlet.jnlp?memory=6144\">6GB</a>" +
+	"    </span></font>" +
+	"    </td>" +
+	"</tr>" +
+	"<tr><td><span style=\"font-size:11px;\">" +
+	"    <em>If you have trouble launching Chipster with Mac, read&nbsp;<a" +
+	"    href=\"http://chipster.csc.fi/manual/launchChipsterWithMac.html\">this</a>" +
+	"    </em></span>" +
+	"    </td>" +
+	"</tr>" +
+	"</tbody>" +
+	"</table>";
+
+var exe_notes =
+       "<h3>Note</h3>" +
+       "<p>Please note that the Chipster server of the Application on Demand " +
+       "Infrastructure has only a limited capacity. Due to that, we hope " +
+       "that the users of this Chipster server will not have more than one " +
+       "job running at a time. If you need more resources, please consider " +
+       "setting up your own <a " +
+       "href=\"https://github.com/chipster/chipster/wiki/FedCloudChipster\">" +
+       "Chipster server</a>.</p>" +
+       "<h4>What is Chipster?</h4>" +
+       "<p>Chipster is a user-friendly analysis software for high-throughtput " +
+       "data. It contains over 300 analysis tools for next generation sequencing " +
+       "(NGS), microarray, proteomics and sequence data. Users can save and share " +
+       "automatic analysis workflows, and visualize data interactively using a " +
+       "built-in genome browser and many other visualizations.</p>"
+       "<p>Chipster's client software uses Java Web Start to install itself " +
+       "automatically, and it connects to computing servers for the actual analysis.</p>" +
+       "<p>Please see the Chipster <a href=\"https://chipster.csc.fi\">main site</a> " +
+       "for courses, updates and other information.";
+
+
+
+// Chipster username and passowrd
+// Active password stores the last available password used to access Chipster
+var default_username = fg_user_info.name;
+var default_password = gen_passwd();
+var active_password = "";
+var active_form = false;
+
+function gen_passwd() {
+  // Generate a short but strong random password
+  return Math.random().toString(36).slice(-8);
+}
+
+function generic_error(message) {
+  mail_subject = "User support for application: " + application_name;
+  mail_body = "I would like to be contacted in order to get access or " +
+              "receive more information about the application: '" + application_name +
+              "'.\nMany thanks,\nRegards\n" + "<your name>";
+  html = "<div class=\"alert alert-danger\" role=\"alert\">" +
+         "  <button type=\"button\"" +
+         "          class=\"close\"" +
+         "          data-dismiss=\"alert\">&times;</button>" +
+         "  <strong>Warning!</strong> " + 
+         "  <p>" + message + "</p>" +
+	 "</div>" +
+         "<div class=\"disclaimer\">" + 
+         "<p>Please contact the <a href=\"" + user_support +
+         "?subject=" + mail_subject + "&body=" + mail_body + 
+         "\">user support</a> to get information and instructions " +
+         "about the access to this application." +
+         "</p></div>";
+  return html;
+}
 
 function build_page() {
   // Below the structure of the page containing elemennts:
   //   * User info
   //   * Application info
   //   * Task info and its output
-  var html = "<div class=\"" + application_name + "\">" +
+  var html = "<div style=\"background-color:white; " +
+             "             padding-top: 10px; padding-right: 10px; " +
+             "             padding-bottom: 10px; padding-left: 10px\"" +
+	     "     class=\"" + application_name + "\">" +
              "  <p>" + welcomeText + "</p>" +
              "  <div class=\"error\"></div>" +
              "  <div class=\"user_info\"></div>" +
              "  <div class=\"app_info\"></div>" +
              "  <div class=\"submission_form\"></div>" +
-             "  <div class=\"configuration_form\"></div>" +
+             "  <div class=\"chipster_info\"></div>" +
              "  <div class=\"task_info\"></div>" +
              "</div>";
   if(themeDisplay.isSignedIn()) {
-      // init call may report errors to be notified
-      if(fg_user_info.err_message.length>0) {
-          message = "Unable to retrieve information for user: '" +
-                    fg_user_info.name + "'; error: '" +
-                    fg_user_info.err_message;
-          report_error(message, user_support);
-      } else {
-          // Performs a cascading check on user, app and task
-          // adding dynamically elements into the web pages
-          // accordingly to the FG API calls performed
-          check_user_app_tasks();
-      }
+    if(fg_user_info.err_message.length > 0) {
+      // Backend error reporting
+      html = generic_error("Backend error reporting: '" + fg_user_info.err_message + "'.");
+    } else {
+      // Cascading call sequence building querying FG and 
+      // building the web page acconrdingly
+      check_user_app_tasks();
+    }
   } else {
-    mail_subject = "User support for application: " + application_name;
-    mail_body = "I would like to be contacted in order to get access or " +
-                "receive more information about the application: '" + application_name +
-                "'.\nMany thanks,\nRegards\n" + "<your name>";
     // Notify that this service is available only for logged users
-    html = "<div class=\"alert alert-danger\" role=\"alert\">" +
-           "  <button type=\"button\"" +
-           "          class=\"close\"" +
-           "          data-dismiss=\"alert\">&times;</button>" +
-           "  <strong>Warning!</strong> " + 
-           "You have to sign-in to access this service." +
-           "</div>" +
-           "<div class=\"disclaimer\">" + 
-           "<p>Please contact the <a href=\"" + user_support +
-           "?subject=" + mail_subject + "&body=" + mail_body + 
-           "\">user support</a> to get information and instructions " +
-           "about the access to this application." +
-           "</p></div>";
+    html = generic_error("You have to sign-in to access this service.");
   }
   return html;
 }
@@ -99,46 +178,6 @@ function report_error(message, support_url) {
 function reset_form(username, password) {
     $("#username").val(username);
     $("#password").val(password);
-    $("#confirm_password").val(password);
-    control_item = $('#password_checker').find('span');
-    control_class = $(control_item).prop('class');
-    $(control_item).removeClass(control_class);
-    $(control_item).addClass("glyphicon glyphicon-remove");
-}
-
-// True if password rules are not satisfied
-function password_rules_fails() {
-    password = $("#password").val();
-    // Rules:
-    //   At least one low case letter [a-z]
-    //   At least one capital letter [A-Z]
-    //   At least one number [0-9]
-    //   At least two special characters except ':'
-    //      [!@#$%^&*()_+\-=\[\]{};'"\\|,.<>\/?] 
-    //   At least 8 characters long
-    re1 = /[a-z]/;
-    re2 = /[A-Z]/;
-    re3 = /[0-9]/;
-    re4 = /[!@#$%^£*()_+\-=\[\]{};'"\\|,.<>\/?][!@#$%^£*()_+\-=\[\]{};'"\\|,.<>\/?]/;
-    return !(re1.test(password) &&
-             re2.test(password) &&
-             re3.test(password) &&
-             re4.test(password) &&
-             password.length > 7);
-}
-
-// Check form
-function check_form() {
-    username = $("#username").val();
-    password = $("#password").val();
-    confirm_password = $("#confirm_password").val();
-    if(password != confirm_password ||
-       username == null ||
-       username == '' ||
-       password_rules_fails()) {
-      return false;
-    }
-    return true;
 }
 
 // Reset form to default username and password
@@ -199,11 +238,7 @@ function confirm_dialog(message, action) {
 }
 
 function exec_application() {
-   if(check_form()) {
-       confirm_dialog("Are you sure to submit " + application_name + "?", do_submit);
-   } else {
-       alert("Please specify a valid username or matching passwords");
-   }
+  confirm_dialog("Are you sure to submit " + application_name + "?", do_submit);
 }
 
 // Success trash_task
@@ -239,50 +274,19 @@ var do_action_button = function() {
     }
 }
 
-// Toggle view of a password record item
-var do_eyebutton = function() {
-    task_id = this.id.split('_')[3];
-    control_item = $('#toggle_password_view_' + task_id).find('span');
-    control_class = $(control_item).prop('class');
-    if(control_class == 'glyphicon glyphicon-eye-close') {
-        new_class = 'glyphicon glyphicon-eye-open';
-        new_type = 'text';
-    } else {
-        new_class = 'glyphicon glyphicon-eye-close';
-        new_type = 'password';
-    }
-    $(control_item).removeClass(control_class);
-    $(control_item).addClass(new_class);
-    $('#password_' + task_id).attr('type', new_type);
-}
-
-// Called during password control change it flags correct passwords
-var password_checker = function() {
-  control_item = $('#password_checker').find('span');
-  control_class = $(control_item).prop('class');
-  $(control_item).removeClass(control_class);
-  if(password_rules_fails()) {
-    $(control_item).addClass("glyphicon glyphicon-remove");
-  } else {
-    $(control_item).addClass("glyphicon glyphicon-ok");
-  }
-}
-
 // Build the tasks table from passed task_info values
 function build_tasks_table(task_data) {
     var table_rows="";
+    var done_entry = false;
     for(var i=0; i<task_data.length; i++) {
         var status = task_data[i].status;
         var task_id = task_data[i].id;
         var creation = task_data[i].creation;
         var user = task_data[i].arguments[0];
-  var eye_button = "<button name=\"toggle_password_view_" + task_id + "\"" +
-             "        id=\"toggle_password_view_" + task_id + "\">" +
-             "        <span class=\"glyphicon glyphicon-eye-close\"></span></button>";
         var password = "<input id=\"password_" + task_id + "\"" +
-                       "       type=\"password\"" +
+                       "       type=\"text\"" +
                        "       name=\"password_" + task_id + "\"" +
-           "       value=\"" + task_data[i].arguments[1] + "\">";
+                       "       value=\"" + task_data[i].arguments[1] + "\">";
         var action_button = "";
         if(status == "DONE") {
             status = "<span class=\"badge badge-pill badge-success\">DONE</span>";
@@ -290,6 +294,10 @@ function build_tasks_table(task_data) {
                 "<button name=\"trash\" id=\"task_" + i + "_" + task_id + "\">" +
                 "<span class=\"glyphicon glyphicon glyphicon glyphicon-trash\" aria-hidden=\"true\"></span>" +
                 "</button>";
+	   if(i == 0) {
+             done_entry = true;
+             active_password = task_data[i].arguments[1];
+	   }
         } else if(status == "ABORTED") {
             status = "<span class=\"badge badge-pill badge-danger\">ABORT</span>";
              action_button =
@@ -314,13 +322,18 @@ function build_tasks_table(task_data) {
             "<td>" + action_button + "</td>" +
             "<td>" + creation + "</td>" + 
             "<td>" + status + "</td>" +
-            "<td>" + user + "</td>" +
-            "<td>" + password + eye_button + "</td>" +
+            "<td>" + password + "</td>" +
             "</tr>";
     }
     // Fill table if task records exist
     if(table_rows.length > 0) {
       $(".task_info").append(
+	"    <p>Please press the button below to show past executions.</p>" +
+	"    <button name=\"view_hide_creds\"" +
+        "            id=\"view_hide_creds\"" +
+        "            data-toggle=\"collapse\"" +
+        "            data-target=\"#exe_list\">Show</button>" +
+        "    <div id=\"exe_list\" class=\"collapse\">" +
         "    <table id=\"task_table_title\">" +
         "    <tr><td>" +
         "        <button id=\"refresh_tasks\">" +
@@ -329,13 +342,19 @@ function build_tasks_table(task_data) {
         "        <td><h4>Executions</h4></td></tr>" +
         "    </table>" +
         "    <table id=\"task_table\" class=\"table\"></table>");
+      $('#view_hide_creds').on("click",function() {
+          if($('#view_hide_creds').html() == "Hide") {
+            $('#view_hide_creds').html("Show");
+          } else {
+            $('#view_hide_creds').html("Hide");
+          }
+      });
       $("#refresh_tasks").on("click",refresh_tasks);
       $('#task_table').append(
         "<tr>" + 
         "<th>Action</th>" + 
         "<th>Date</th>" +
         "<th>Status</th>" +
-        "<th>User</th>" +
         "<th>Password</th>" +
         "</tr>");
       $('#task_table').append(table_rows);
@@ -343,7 +362,17 @@ function build_tasks_table(task_data) {
       for(var i=0; i<task_data.length; i++) {
           var task_id = task_data[i].id;
           $("#task_" + i + "_" + task_id).on("click",do_action_button);
-    $("#toggle_password_view_" + task_id).on("click", do_eyebutton);
+      }
+      $(".task_info").append("</div>");
+      // In case at least a task is in DONE status, inform the user to switch
+      // in chipster access mode
+      if(done_entry) {
+          $('.task_info').append(
+            "<p>Your last active task is in  done status, you can now hide account form, pressing the button " +
+            "below.</p>" +
+            "<button name=\"hide_form\" id=\"hide_form\" class=\"btn btn-warning\">Hide form</button>"
+          );
+          $("#hide_form").on("click", hide_form); 
       }
     } else {
       // Report no records are available yet
@@ -353,62 +382,22 @@ function build_tasks_table(task_data) {
     }
 }
 
-// Toggle password views() 
-function toggle_password_views() {
-    value = null;
-    value = toggle_password_view("password");
-    value = toggle_password_view("confirm_password");
-    if (value == 0) {
-        $('#toggle_password_view').find('span').removeClass('glyphicon glyphicon-eye-close')
-        $('#toggle_password_view').find('span').addClass('glyphicon glyphicon-eye-open')
-    } else {
-        $('#toggle_password_view').find('span').removeClass('glyphicon glyphicon-eye-open')
-        $('#toggle_password_view').find('span').addClass('glyphicon glyphicon-eye-close')
-    }
+// Called by the 'ACCESS' button when at lease a DONE task exist
+var hide_form = function() {
+  active_form = false;
+  reset_areas("submission_form");
+  check_user_app_tasks();
 }
 
-// Toggle password visibility
-function toggle_password_view(password_input) {
-  value = null;
-  if($('#' + password_input).attr('type') == "password") {
-    $('#' + password_input).attr('type', 'text');
-    value = 0;
-  } else {
-    $('#' + password_input).attr('type', 'password');
-    value = 1;
-  }
-  return value;
+// Renew credentials
+function renew_passwd() {
+  reset_form(default_username, gen_passwd());
 }
 
 // Create the application submission form
 function build_submission_form() {
     reset_areas("submission_form");
-    modal_body = 
-        "<p>Password content must comply with the following rules:"+
-        "<ul><li>At least <b>one letter</b></li>" +
-        "    <li>At least <b>one capital letter</b>" +
-        "    <li>At least <b>one number</b>" +
-        "    <li>At leatt <b>two special characters, except the ':' and '&' characters</b>" +
-        "    <li>At least <b>eight characters long</b></p>";
     $(".submission_form").append(
-      "<div class=\"modal fade\" id=\"info_pass_modal\" tabindex=\"-1\" role=\"dialog\" style=\"display: none;\">" +
-      "<div class=\"modal-dialog\" role=\"document\">" +
-      "<div class=\"modal-content\">" +
-      "  <div class=\"modal-header\">" +
-      "    <h4 class=\"modal-title\">Password rules</h4>" +
-      "    <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\">" +
-      "      <span aria-hidden=\"true\">&times;</span>" +
-      "    </button>" +
-      "  </div>" +
-      "  <div class=\"modal-body\">" +
-      modal_body +    
-      "  </div>" +
-      "  <div class=\"modal-footer\">" +
-      "    <button type=\"button\" class=\"btn btn-secondary\" data-dismiss=\"modal\">Close</button>" +
-      "  </div>" +
-      "</div>" +
-      "</div>" +
-      "</div>" +
       "<div><h3>Specify user account data</h3><br/>" +
       "<table>" +
       "<tr><td><label for=\"username\">User name:</label></td>" +
@@ -416,32 +405,20 @@ function build_submission_form() {
       "    <td><input id=\"username\"" +
       "               type=\"text\"" +
       "               id=\"username\"" +
-      "               name=\"username\"</td>" +
+      "               name=\"username\"" +
+      "               readonly>" +
+      "    </td>" +
       "    <td></td></tr>" +
       "<tr><td><label for=\"password\">Password:</label></td>" +
       "    <td></td>" +
       "    <td><input id=\"password\"" +
-      "               type=\"password\"" +
-      "               name=\"password\"></td>" +
-      "    <td><button name=\"password_checker\"" +
-      "                id=\"password_checker\" disabled>" +
-      "                <span class=\"glyphicon glyphicon-remove\"></span></td></tr>" +
-      "<tr><td><label for=\"confirm_password\">Confirm:</label></td>" +
-      "    <td></td>" +
-      "    <td><input id=\"confirm_password\"" +
-      "               type=\"password\" id=\"confirm_password\"" +
-      "               name=\"confirm_password\"></td>" +
-      "    <td><button name=\"password_info\"" +
-      "                id=\"password_info\"" +
-      "                data-toggle=\"modal\" data-target=\"#info_pass_modal\">" +
-      "        <span class=\"glyphicon glyphicon-info-sign\"></span>" +
-      "        </button></td></tr>" +
-      "<tr><td><label for=\"toggle_password_view\">View password:</label></td>" +
-      "    <td></td>" +
-      "    <td><button name=\"toggle_password_view\"" +
-      "                id=\"toggle_password_view\">" +
-      "                <span class=\"glyphicon glyphicon-eye-close\"></span></button></td>" +
-      "    <td></td></tr>" +
+      "               name=\"password\"" +
+      "               type=\"text\"" +
+      "               readonly></td>" +
+      "    <td><button name=\"renew_pwd\"" +
+      "                id=\"renew_pwd\">" +
+      "                <span class=\"glyphicon glyphicon-repeat\">" +
+      "                </span></button></td></tr>" +
       "<tr><td></td><td></td><td></td><td></td></tr>" +
       "<tr><td><button type=\"submit\" " +
       "                class=\"btn btn-success\" " +
@@ -454,28 +431,63 @@ function build_submission_form() {
       "</div>");
     reset_form(default_username, default_password);
     $("#submit_button").on("click",exec_application);
-    $("#reset_button").on("click",reset_default);
-    $("#toggle_password_view").on("click",toggle_password_views);
-    $("#password").on('input', password_checker);
-    $("#password").on('keyup', password_checker);
+    $("#reset_button").on("click",renew_passwd);
+    $("#renew_pwd").on("click",renew_passwd);
+}
+
+function build_access_pane() {
+  reset_areas("chipster_info");
+  $(".chipster_info").append(
+    "<p>Your Chipster access credentials:</p>" +
+    "<table>" +
+    "<tr><td>Username: </td><td><b>" + default_username + "</b></td></tr>" +
+    "<tr><td>Password: </td><td><b>" + active_password + "</b></td></tr>" +
+    "</table>" +
+    launch_chipster +
+    "<p>If you would like to reset your current chipster credentials, please press the button "+
+    "below, to show the submission form.</p>" +
+    "<button id=\"reset_creds\" class=\"btn btn-danger\">Show form</button>" +
+    exe_notes
+  );
+  $('#launch_chipster').css('background-color', '#E8EDF1');
+  $("#reset_creds").on("click", show_form);
+}    
+
+// Goes to the credentials submission form
+var show_form = function() {
+  active_form = true;
+  reset_areas("chipster_info");
+  check_user_app_tasks();
 }
 
 // Success case for check task 
 var proc_check_tasks = function(data) {
     reset_areas("task_info");
-    // Process and create the task list 
+    // Process and create the task list
+    credentials_task = -1;
     task_info = data['tasks'];
-    $('.task_info').data('task_info',data['tasks']);
-    // Now build tasks table
-    build_tasks_table(task_info);
-}
-
-// Error case for check task
-var proc_check_tasks_error = function(jqXHR, exception) {
-    reset_areas("task_info");
-    report_error("Error retrieving task information for '" +
-                 application_name + "' application. ",
-                 user_support);
+    $('.task_info').data('task_info',task_info);
+    if(task_info.length > 0) {
+      // At least a task exists, locate the last one in DONE status
+      for(i=0; i<task_info.length; i++) {
+        if(task_info[i].status == "DONE") {
+	  credentials_task = i;
+          active_password = task_info[i].arguments[1];
+          break;
+        }
+      }
+      console.log("active form: " + active_form + " cred_tasks " + credentials_task);
+      console.log("active pass: " + active_password);
+      // If no credential tasks have been found, show the credentials
+      // submission form
+      if(credentials_task < 0 || active_form == true) {
+        build_submission_form();
+	build_tasks_table(task_info);
+      } else {
+	// Credentials are available, proovide Chipster access
+        build_access_pane();
+      }
+    }
 }
 
 // Error case for check task
@@ -497,19 +509,17 @@ function check_tasks(application) {
 
 // Success case for check_app
 var proc_check_app_tasks = function(data) {
+    reset_areas("app_info");
     if(data.id != null) {
         // Application hidden data
         app_info = {
             'id': data.id,
             'name': data.name,
         };
-        $('.app_info').data('app_info',app_info)
-        // Now it is possible to build the submission form
-        build_submission_form();
+        $('.app_info').data('app_info',app_info);
         // Now check the application tasks
         check_tasks(application_name);
     } else {
-        reset_areas("app_info");
         report_error("It seems the application '" + application_name +
                      "' is not registered in FutureGateway. ",
                       user_support);
@@ -536,6 +546,7 @@ function check_app_tasks(application) {
 
 // Success case for check_user_app_tasks
 var proc_user_app_tasks = function(data) {
+    reset_areas("user_info");
     if(data.id != null &&
        data.mail != 'default@liferay.com') {
         // User hidden data
@@ -551,7 +562,6 @@ var proc_user_app_tasks = function(data) {
         // User information recovered, it is possible to check the app.
         check_app_tasks(application_name);
     } else {
-        reset_areas("user_info");
         report_error("It seems you are not yet registered as " +
                      "FutureGateway user.",
                      user_support);
@@ -561,16 +571,17 @@ var proc_user_app_tasks = function(data) {
 // Error case for check_user_app_task
 var proc_user_app_tasks_error = function(jqXHR, exception) {
     reset_areas("user_info");
-    report_error("Error retrieving portal user information.",
+    report_error("Error retrieving portal user information. " +
+	         "URL: '" + url + "'",
                  user_support);
 }
 
 // Check user application and task
 function check_user_app_tasks() {
-    url = fg_api_settings.base_url + '/' +
-          fg_api_settings.version  +'/users/' +
-          fg_user_info.name;
-    doGet(url, proc_user_app_tasks, proc_user_app_tasks_error);
+  url = fg_api_settings.base_url + '/' +
+        fg_api_settings.version  +'/users/' +
+        fg_user_info.name;
+  doGet(url, proc_user_app_tasks, proc_user_app_tasks_error);
 }
 
 //
@@ -628,4 +639,3 @@ function doDelete(url, successFunction, failureFunction) {
 export default function(rootElementId) {
   $(`#${rootElementId}`).html(build_page());
 }
-
