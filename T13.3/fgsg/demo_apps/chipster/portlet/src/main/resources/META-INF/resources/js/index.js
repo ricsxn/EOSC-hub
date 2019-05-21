@@ -19,15 +19,15 @@ var application_name = 'chipster';
 var welcomeText = 
   "<img src=\"/egissod/documents/51171/0/chipster_image.png/e3a12473-63f8-656d-8ec4-cfa9404d5207?t=1556113400645\"" +
   "     width=\"100%\"/>" +
-  "<p>This page allows members of the Applications on Demand Infrastructure " +
-  "to create a temporary user accounts to a Chipster data analysis server, " +
-  "running in the EGI Federated Cloud.</p>";
+  "<p>This page allows members of the Applications on Demand (AoD) servive " +
+  "to create a temporary user accounts (by default valid for <b>one month</b>) to access the Chipster data analysis server, " +
+  "running in the EGI Federated Cloud.</p>" + 
   "<p>In case you do not have yet the necessary " +
-  "credentials to access Chipster application, a web form will " +
+  "credentials to access Chipster server, a web form will " +
   "prompt you to setup your own username and password pair. "
   "The username will be the same of the portal user account " +
   "and once the credentials will be correcty generated, " +
-  "it will be possible to access the Chipster application. " +
+  "it will be possible to access the Chipster server. " +
   "It will be also possible to reset credentials anytime or " +
 	          "because they got expired.</p>";
 var launch_chipster = 
@@ -86,7 +86,19 @@ var exe_notes =
        "<p>Please see the Chipster <a href=\"https://chipster.csc.fi\">main site</a> " +
        "for courses, updates and other information.";
 
-
+function span_eye(mode, span_name, span_id) {
+  if(span_id != null) {
+    span_id = "_" + span_id;
+  } else {
+    span_id = "";
+  }
+  if(mode == true) {
+    span_eye_class = "glyphicon glyphicon-eye-open";
+  } else {
+    span_eye_class = "glyphicon glyphicon-eye-close";
+  }
+  return "<span id=\""+ span_name + span_id + "\" class=\"" + span_eye_class + "\"></span>";
+}
 
 // Chipster username and passowrd
 // Active password stores the last available password used to access Chipster
@@ -176,8 +188,8 @@ function report_error(message, support_url) {
 
 // Reset submission form
 function reset_form(username, password) {
-    $("#username").val(username);
-    $("#password").val(password);
+    $("#account_username").val(username);
+    $("#account_password").val(password);
 }
 
 // Reset form to default username and password
@@ -222,8 +234,8 @@ function do_task(username, password) {
 // Perform application submission
 function do_submit() {
     $("#submit_button").prop('disabled','true');
-    username = $('#username').val(); 
-    password = $("#password").val();
+    username = $('#account_username').val(); 
+    password = $("#account_password").val();
     do_task(username, password);
     $("#submit_button").removeAttr("disabled");
 }
@@ -238,7 +250,7 @@ function confirm_dialog(message, action) {
 }
 
 function exec_application() {
-  confirm_dialog("Are you sure to submit " + application_name + "?", do_submit);
+  confirm_dialog("Are you sure to set/update your temporary account?", do_submit);
 }
 
 // Success trash_task
@@ -284,9 +296,10 @@ function build_tasks_table(task_data) {
         var creation = task_data[i].creation;
         var user = task_data[i].arguments[0];
         var password = "<input id=\"password_" + task_id + "\"" +
-                       "       type=\"text\"" +
+                       "       type=\"password\"" +
                        "       name=\"password_" + task_id + "\"" +
                        "       value=\"" + task_data[i].arguments[1] + "\">";
+	var password_button = "<button id=\"passwordbutton_" + i + "_" + task_id + "\">" + span_eye(true, 'span_eye', i) + "</button>";
         var action_button = "";
         if(status == "DONE") {
             status = "<span class=\"badge badge-pill badge-success\">DONE</span>";
@@ -322,7 +335,7 @@ function build_tasks_table(task_data) {
             "<td>" + action_button + "</td>" +
             "<td>" + creation + "</td>" + 
             "<td>" + status + "</td>" +
-            "<td>" + password + "</td>" +
+            "<td>" + password + password_button + "</td>" +
             "</tr>";
     }
     // Fill table if task records exist
@@ -362,15 +375,15 @@ function build_tasks_table(task_data) {
       for(var i=0; i<task_data.length; i++) {
           var task_id = task_data[i].id;
           $("#task_" + i + "_" + task_id).on("click",do_action_button);
+	  $("#passwordbutton_" + i + "_" + task_id).on("click", toggle_task_password);
       }
       $(".task_info").append("</div>");
       // In case at least a task is in DONE status, inform the user to switch
       // in chipster access mode
       if(done_entry) {
           $('.task_info').append(
-            "<p>Your last active task is in  done status, you can now hide account form, pressing the button " +
-            "below.</p>" +
-            "<button name=\"hide_form\" id=\"hide_form\" class=\"btn btn-warning\">Hide form</button>"
+            "<p>Your last active task is in  done status, you can now hide account form, pressing the back button below.</p>" +
+            "<button name=\"hide_form\" id=\"hide_form\" class=\"btn btn-warning\">Back</button>"
           );
           $("#hide_form").on("click", hide_form); 
       }
@@ -380,6 +393,20 @@ function build_tasks_table(task_data) {
           "<div class=\"alert alert-info\" role=\"alert\">No tasks avaiable yet for this application</div>"
       );
     }
+}
+
+var toggle_task_password = function() {
+  table_row = this.id.split('_')[1]; // i-th element of task table
+  task_id = this.id.split('_')[2]; // FG task_id
+  pass_id = "#password_" + task_id;
+  eye_id = "#span_eye_" + table_row;
+  if($(pass_id).attr('type') == 'password') {
+    $(pass_id).get(0).type = 'text';
+    $(eye_id).removeClass('glyphicon glyphicon-eye-open').addClass('glyphicon glyphicon-eye-close');
+  } else {
+    $(pass_id).get(0).type = 'password';
+    $(eye_id).removeClass('glyphicon glyphicon-eye-close').addClass('glyphicon glyphicon-eye-open');
+  }
 }
 
 // Called by the 'ACCESS' button when at lease a DONE task exist
@@ -402,7 +429,7 @@ function build_submission_form() {
       "<table>" +
       "<tr><td><label for=\"username\">User name:</label></td>" +
       "    <td></td>" +
-      "    <td><input id=\"username\"" +
+      "    <td><input id=\"account_username\"" +
       "               type=\"text\"" +
       "               id=\"username\"" +
       "               name=\"username\"" +
@@ -411,14 +438,14 @@ function build_submission_form() {
       "    <td></td></tr>" +
       "<tr><td><label for=\"password\">Password:</label></td>" +
       "    <td></td>" +
-      "    <td><input id=\"password\"" +
+      "    <td><input id=\"account_password\"" +
       "               name=\"password\"" +
       "               type=\"text\"" +
       "               readonly></td>" +
       "    <td><button name=\"renew_pwd\"" +
       "                id=\"renew_pwd\">" +
       "                <span class=\"glyphicon glyphicon-repeat\">" +
-      "                </span></button></td></tr>" +
+      "                </span></button><button id=\"eye_account_password\">" + span_eye(false, "span_eye", null) + "</button></td></tr>" +
       "<tr><td></td><td></td><td></td><td></td></tr>" +
       "<tr><td><button type=\"submit\" " +
       "                class=\"btn btn-success\" " +
@@ -433,25 +460,38 @@ function build_submission_form() {
     $("#submit_button").on("click",exec_application);
     $("#reset_button").on("click",renew_passwd);
     $("#renew_pwd").on("click",renew_passwd);
+    $('#eye_account_password').on("click", toggle_password_view);
 }
 
 function build_access_pane() {
   reset_areas("chipster_info");
   $(".chipster_info").append(
-    "<p>Your Chipster access credentials:</p>" +
+    "<p>Your temporary account information:</p>" +
     "<table>" +
-    "<tr><td>Username: </td><td><b>" + default_username + "</b></td></tr>" +
-    "<tr><td>Password: </td><td><b>" + active_password + "</b></td></tr>" +
-    "</table>" +
+    "<tr><td>Username: </td><td><input id=\"account_username\" type=\"text\" value=\"" + default_username + "\" readonly></td><td></td></tr>" +
+    "<tr><td>Password: </td><td><input id=\"account_password\" type=\"password\" value=\"" + active_password + "\" readonly></td><td><button id=\"eye_account_password\">" + span_eye(true, "span_eye", null) + "</button></td></tr>" +
+    "<tr><td>Created: </td><td><input id=\"account_created\" type=\"text\" value=\"" + last_change + "\" readonly></td><td></td></tr>" +
+    "</table><br/>" +
     launch_chipster +
-    "<p>If you would like to reset your current chipster credentials, please press the button "+
+    "<br/><p>If you would like to reset your current chipster credentials, please press the button "+
     "below, to show the submission form.</p>" +
     "<button id=\"reset_creds\" class=\"btn btn-danger\">Show form</button>" +
     exe_notes
   );
   $('#launch_chipster').css('background-color', '#E8EDF1');
   $("#reset_creds").on("click", show_form);
+  $('#eye_account_password').on("click", toggle_password_view);
 }    
+
+var toggle_password_view = function() {
+  if($('#account_password').attr('type') == 'password') {
+    $('#account_password').get(0).type = 'text';
+    $('#span_eye').removeClass('glyphicon glyphicon-eye-open').addClass('glyphicon glyphicon-eye-close');
+  } else {
+    $('#account_password').get(0).type = 'password';
+    $('#span_eye').removeClass('glyphicon glyphicon-eye-close').addClass('glyphicon glyphicon-eye-open');
+  }
+}
 
 // Goes to the credentials submission form
 var show_form = function() {
@@ -473,6 +513,7 @@ var proc_check_tasks = function(data) {
         if(task_info[i].status == "DONE") {
 	  credentials_task = i;
           active_password = task_info[i].arguments[1];
+	  last_change = task_info[i].last_change;
           break;
         }
       }
