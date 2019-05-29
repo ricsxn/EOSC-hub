@@ -26,6 +26,7 @@
     String appName = "rstudio";
     int appId = 0;
     String appGroup = appName;
+    String fgsgGroup = "fgsg_user";
 
     // Initialize FutureGatewayAPIs object
     FutureGatewayAPIs fgAPIs = new FutureGatewayAPIs(
@@ -92,7 +93,7 @@
                 if(!userGroup) {
                     // Automatically add the user to the Application group
                     fgAPIs.setBaselineToken(portletAccessToken);
-                    String[] userGroups = { appGroup };
+                    String[] userGroups = { appGroup, fgsgGroup };
                     userGroup = fgAPIs.addUserGroups(screenName, userGroups);
                 }
             } else {
