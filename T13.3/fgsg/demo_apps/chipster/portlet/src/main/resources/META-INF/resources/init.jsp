@@ -16,7 +16,7 @@
 <%
     // FG settings
     String fgUser = "futuregateway";
-    String fgPassword = "futuregateway";
+    String fgPassword = "**************";
     String fgBaseUrl = "http://fgapiserver";
     String fgAPIVer = "v1.0";
     boolean fgStatus = false;
@@ -24,8 +24,9 @@
 
     // Application settings
     String appName = "chipster";
-    int appId = 0;
+    int appId = 7;
     String appGroup = appName;
+    String fgsgGroup = "fgsg_user";
 
     // Initialize FutureGatewayAPIs object
     FutureGatewayAPIs fgAPIs = new FutureGatewayAPIs(
@@ -93,7 +94,7 @@
                 if(!userGroup) {
                     // Automatically add the user to the Application group
                     fgAPIs.setBaselineToken(portletAccessToken);
-                    String[] userGroups = { appGroup };
+                    String[] userGroups = { appGroup, fgsgGroup };
                     userGroup = fgAPIs.addUserGroups(screenName, userGroups);
                 }
             } else {

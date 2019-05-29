@@ -507,7 +507,7 @@ var proc_check_tasks = function(data) {
     credentials_task = -1;
     task_info = data['tasks'];
     $('.task_info').data('task_info',task_info);
-    if(task_info.length > 0) {
+    if(task_info.length >= 0) {
       // At least a task exists, locate the last one in DONE status
       for(i=0; i<task_info.length; i++) {
         if(task_info[i].status == "DONE") {
