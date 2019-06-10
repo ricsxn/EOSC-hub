@@ -44,7 +44,7 @@ var launch_chipster =
 	"         src=\"/egissod/documents/51171/0/launch_button-3.png/ea9ab2a0-c5a1-c9cd-930b-085209bfd816?t=1555687623683\"" +
 	"         style=\"font-size: 14px; line-height: 19px; width: 46px; height: 50px;\">" +
 	"    </td>" +
-	"    <td><a href=\"http://193.144.35.160:8081/chipster.jnlp\"" +
+	"    <td><a href=\"http://chipster.aod.fedcloud.eu:8081/chipster.jnlp\"" +
 	"        style=\"color: rgb(79, 133, 195); font-size: 14px; line-height: 19px;\">" +
 	"        Launch Chipster</a>" +
 	"    </td>" +
@@ -52,8 +52,8 @@ var launch_chipster =
 	"<tr><td>" +
 	"    <font face=\"sans-serif\">" +
 	"    <span style=\"font-size: 11px; line-height: 19px;\">or launch with more memory: <a" +
-	"    href=\"http://193.144.35.151:8081/servlet.jnlp?memory=3072\">3GB</a> or <a" +
-	"    href=\"http://193.144.35.151:8081/servlet.jnlp?memory=6144\">6GB</a>" +
+	"    href=\"http://chipster.aod.fedcloud.eu:8081/chipster.jnlp?memory=3072\">3GB</a> or <a" +
+	"    href=\"http://chipster.aod.fedcloud.eu:8081/chipster.jnlp?memory=6144\">6GB</a>" +
 	"    </span></font>" +
 	"    </td>" +
 	"</tr>" +
