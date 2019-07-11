@@ -1,0 +1,109 @@
+<script>
+  $(document).ready(function() {
+    var footerContent = "<small>Implemented with: <a href=\"https://github.com/FutureGatewayFramework\"><img src=\"https://fgsg.egi.eu/egissod/documents/51171/0/fglogo_small.png/fd2697e2-fce2-0be8-31dc-5aa00840871d?t=1547036689964\" width=\"20\" heigth=\"20\"> FutureGateway framework</a> | FGSG' Science Software on Demand is an EGI service operated and maintianed by <a href=\"http://www.ct.infn.it\">INFN Catania</a></small>";
+    $('#footer').html(footerContent);
+  });
+</script>
+<!--
+  Carousel taken from: https://www.w3schools.com/booTsTrap/tryit.asp?filename=trybs_ref_js_carousel2&stacked=h
+-->
+<style>
+  .carousel-inner > .item > img,
+  .carousel-inner > .item > a > img {
+    width: 100%;
+    margin: auto;
+  }
+</style>
+<div class="container">
+  <br>
+  <div id="myCarousel" class="carousel slide" data-ride="carousel">
+    
+    <!-- Indicators -->
+    <ol class="carousel-indicators">
+      <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
+      <li data-target="#myCarousel" data-slide-to="1"></li>
+      <li data-target="#myCarousel" data-slide-to="2"></li>
+    </ol>
+    
+    <!-- Wrapper for slides -->
+    <div class="carousel-inner" role="listbox">
+
+      <div class="item active">
+        <img src="https://fgsg.ct.infn.it/egissod/documents/51171/0/app_1.png/dd5cf7e2-c625-ae03-2bc2-5d299ec69ce8?t=1551344210391" alt="R-Studio instance" width="460" height="345">
+        <div class="carousel-caption">
+          <h3>R-Studio</h3>
+          <p>An R-Studio instance for personal use.</p>
+        </div>
+      </div>
+
+      <div class="item">
+        <img src="https://fgsg.ct.infn.it/egissod/documents/51171/0/app_2.png/5173e2e0-1534-068b-28d2-bbfdc5664c67?t=1551344210640" alt="REPAST (PALMS)" width="460" height="345">
+        <div class="carousel-caption">
+          <h3>REPAST for PALMS use case</h3>
+          <p>A REPAST execution GUI for the PALMS experiment.</p>
+        </div>
+      </div>
+      
+      <div class="item">
+        <img src="https://fgsg.ct.infn.it/egissod/documents/51171/0/app_3.png/97882a2f-d003-cbcf-3054-89d0afb94c6c?t=1551344210066" alt="Chipster user accounts" width="460" height="345">
+        <div class="carousel-caption">
+          <h3>Chipster user accounts</h3>
+          <p>Manage users capable to access the Chipster public instance.</p>
+        </div>
+      </div>    
+    </div>
+
+    <!-- Left and right controls -->
+    <a class="left carousel-control" href="#myCarousel" role="button" data-slide="prev">
+      <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
+      <span class="sr-only">Previous</span>
+    </a>
+    <a class="right carousel-control" href="#myCarousel" role="button" data-slide="next">
+      <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+      <span class="sr-only">Next</span>
+    </a>
+  </div>
+</div>
+
+<p>&nbsp;</p>
+
+<center>
+  <table border="0" cellpadding="0" cellspacing="0" style="width: 90%">
+    <tbody>
+      <tr>
+        <td>
+          <p>This section provides&nbsp;a collection of general purpose&nbsp;applications that may be useful for Scientific Communities. Before to access any of these applications, users need to be registered as site member. The registration is possible through the <a href="https://aai.egi.eu" target="">EGI AAI federated authentication</a>. Some applications may also require&nbsp;to submit a service order request via the&nbsp;<a href="https://marketplace.eosc-portal.eu/">EOSC Portal Marketplace</a>; in such case, please register with the <a href="https://www.egi.eu/services/check-in/" target=""><strong>EGI AAI Check-In</strong></a> service.</p>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</center>
+
+<center>
+  <h2>Available applications</h2>
+</center>
+
+<center>
+  <table border="0" cellpadding="4" cellspacing="4" style="width: 90%">
+    <tbody>
+      <tr>
+        <td><a href="/egissod/web/ssod/r-studio" target=""><b>R-Studio</b></a></td>
+        <td>
+          <p>This application, demonstrates how it is possible to reserve private resources to communities members just accessing the&nbsp;Science Gateway. This application allows to instantiate a single personal instance of th R-Studio web interface. <small>Usage instructions are available <a href="/egissod/web/ssod/r-studio1">here</a></small></p>
+        </td>
+      </tr>
+      <tr>
+        <td><a href="/egissod/web/ssod/repast-palms" target=""><b>Repast (PALMS)</b></a></td>
+        <td>
+          <p>The <a href="https://repast.github.io" target="">Repast Suite </a>is a family of advanced, free, and open source agent-based modeling and simulation platforms. This application demonstrates the execution of this kind of software for the specific project PALMS. <small>Usage instructions are available <a href="/egissod/web/ssod/repast-palms-instructions">here</a></small></p>
+        </td>
+      </tr>
+      <tr>
+        <td><a href="/egissod/web/ssod/chipster-accounts" target=""><b>Chipster</b></a></td>
+        <td>
+          <p><a href="https://chipster.csc.fi" target="">Chipster</a> is a user-friendly analysis software for high-throughput data, this application allows to add portal user credentials and access Chipster <a href="http://chipster.csc.fi/">services</a>. <small>Usage instructions are available <a href="/egissod/web/ssod/chipster-user-account-instructions">here</a></small></p>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</center>

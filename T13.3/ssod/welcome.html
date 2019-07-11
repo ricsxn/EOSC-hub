@@ -1,0 +1,144 @@
+<!--
+  Mailto script, hides mail address
+-->
+<script>
+  function SendLinkByMail(href) {
+    var subject= "Science software on demand: Proposing";
+    var mail_address = "fgsg-join@ct.infn.it"
+    var body = "I would like to join the FutureGateway Science Gateway mailiing list\r\n\r\n<";
+    body += window.location.href;
+    body += ">";
+    var uri = "mailto:" + mail_address + "?subject=";
+    uri += encodeURIComponent(subject);
+    uri += "&body=";
+    uri += encodeURIComponent(body);
+    window.open(uri);
+  }
+  $(document).ready(function() {
+    var footerContent = "<small>Implemented with: <a href=\"https://github.com/FutureGatewayFramework\"><img src=\"https://fgsg.egi.eu/egissod/documents/51171/0/fglogo_small.png/fd2697e2-fce2-0be8-31dc-5aa00840871d?t=1547036689964\" width=\"20\" heigth=\"20\"> FutureGateway framework</a> | FGSG' Science Software on Demand is an EGI service operated and maintianed by <a href=\"http://www.ct.infn.it\">INFN Catania</a></small>";
+    $('#footer').html(footerContent);
+  });
+</script>
+<!--
+  Carousel taken from: https://www.w3schools.com/booTsTrap/tryit.asp?filename=trybs_ref_js_carousel2&stacked=h
+-->
+
+<style>
+  .carousel-inner > .item > img,
+  .carousel-inner > .item > a > img {
+    width: 100%;
+    margin: auto;
+  }
+</style>
+<div class="container">
+  <br>
+  <div id="myCarousel" class="carousel slide" data-ride="carousel">
+
+    <!-- Indicators -->
+    <ol class="carousel-indicators">
+      <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
+      <li data-target="#myCarousel" data-slide-to="1"></li>
+      <li data-target="#myCarousel" data-slide-to="2"></li>
+    </ol>
+
+    <!-- Wrapper for slides -->
+    <div class="carousel-inner" role="listbox">
+
+      <div class="item active">
+        <img src="https://fgsg.ct.infn.it/egissod/documents/51171/0/1_new.png/78cfe917-18ef-f99c-67b0-fc75c354359e?t=1551287448332" alt="Science software on demand" width="460" height="345">
+        <div class="carousel-caption">
+          <h3>Science software on demand</h3>
+          <p>A selection of most common scientific applications, demonstrators and use cases.</p>
+        </div>
+      </div>
+
+      <div class="item">
+        <img src="https://fgsg.ct.infn.it/egissod/documents/51171/0/2_new.png/338454f3-428a-763d-b38d-60e61cbde3fd?t=1551287448126" alt="Available applications" width="460" height="345">
+        <div class="carousel-caption">
+          <h3>Available applications</h3>
+          <p>A collection of applications demonstrating the capabilities of a ScienceGateway instance built on top of FutureGateway.</p>
+        </div>
+      </div>
+
+      <div class="item">
+        <img src="https://fgsg.ct.infn.it/egissod/documents/51171/0/3_new.png/1863eb30-a374-ee9b-e213-7d442f0c22e6?t=1551287447817" alt="Propose" width="460" height="345">
+        <div class="carousel-caption">
+          <h3>Propose a new application</h3>
+          <p>Try on this portal your application or describe your community use case for a ScienceGateway implementation.</p>
+        </div>
+      </div>    
+    </div>
+
+    <!-- Left and right controls -->
+    <a class="left carousel-control" href="#myCarousel" role="button" data-slide="prev">
+      <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
+      <span class="sr-only">Previous</span>
+    </a>
+    <a class="right carousel-control" href="#myCarousel" role="button" data-slide="next">
+      <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+      <span class="sr-only">Next</span>
+    </a>
+  </div>
+</div>
+
+<p>&nbsp;</p>
+
+<center>
+  <table border="0" cellpadding="0" cellspacing="0" style="width: 90%">
+    <tbody>
+      <tr>
+        <td>
+          <p>The Science Software on Demand is a ScienceGateway service built on top of the <a href="http://www.futuregateway.org">FutureGateway</a>, it&nbsp;provides a selected number of&nbsp;general purpose scientific applications available for all registered members. With this web site, it is also possible to propose new use cases registering them on this portal or eventually being supported to create a new dedicated&nbsp;ScienceGateway if necessary.</p>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</center>
+
+<center>
+  <table border="0" cellpadding="0" cellspacing="0" style="width: 90%">
+    <tbody>
+      <tr>
+        <th style="width: 50%">
+          <h3><a href="https://fgsg.ct.infn.it/egissod/web/ssod/applications" target="">Applications</a></h3>
+        </th>
+        <th style="width: 50%">
+          <h3><a href="https://fgsg.ct.infn.it/egissod/web/ssod/propose" target="">Propose</a></h3>
+        </th>
+      </tr>
+      <tr>
+        <td style="width: 50%" valign="top">
+          <p>The top level of the application menu, provides an overview of the available applications. Each&nbsp;sub menu voice will redirect directly to the specific application. Only registered members can access the applications and for some of them it is also necessary to submit a service order request via the <a href="https://marketplace.eosc-portal.eu">EOSC Portal Marketplace</a>.</p>
+
+          <p><small><b>To submit your order request, please register with the EGI AAI Check-In service</b></small>.</p>
+        </td>
+        <td style="width: 50%" valign="top">
+          <p>The propose menu, provides instructions for&nbsp;a possible integration of new use cases to include in this portal in the application menu, or to be supported in the creation of a new dedicated Science Gateway based on the <a href="https://github.com/FutureGatewayFramework" target="">FutureGateway Framework</a>.</p>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table border="0" cellpadding="0" cellspacing="0" style="width: 90%">
+    <tbody>
+      <tr>
+        <th style="width: 50%">
+          <h3><a href="javascript:(function()%7BSendLinkByMail()%3B%7D)()%3B">Mailing list</a></h3>
+        </th>
+        <th style="width: 50%">
+          <h3><a href="/egissod/web/ssod/login" target="">Alternative authentication</a></h3>
+        </th>
+      </tr>
+      <tr>
+        <td>
+          <p>You may be also interested to join the FGSG <a href="javascript:(function()%7BSendLinkByMail()%3B%7D)()%3B">mailing-list</a> to be updated about the activities related to this web site.</p>
+        </td>
+        <td>
+          <p>This website automatically uses EGI AAI authentication source as default. It is possible to use other authentication sources, by clicking this paragraph title.</p>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</center>
+
+<p>&nbsp;</p>
