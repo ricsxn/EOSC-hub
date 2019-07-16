@@ -1,0 +1,179 @@
+#!/bin/bash
+#
+# container_manager Provides a way to manage easily container requests that
+#                   can grow dynamically by external requests
+#                   The script provides functions to preserve the hosting
+#                   system from containers overload
+#                   This script also manage port request assignment
+#
+# This script can be used sourcing it and then ising its defined functions
+# otherwise it can be used explicitly calling it.
+# Implemented calls are:
+#
+#     request <container name pattern> <number of requested instances>
+#
+#     The output of this command will be the number of allowed instances
+#     a number <= of the number of requested instances
+#     Port reseervation can be configured by the file: .container_registry
+#     by entries in the form of:
+#    
+#     <container_pattern> <max number of running instances>
+#
+# Normally script functionalities are claimed by remote access to the
+# container host; both kind of calls are correct:
+#
+#      ssh duser@localhost -x "source .container_manager;\
+#	                       request_containers r-studio 15" 
+#      ssh duser@localhost -x "./.container_manager request;\
+#                              r-studio 150" 
+#
+# To get a new port use:
+#
+#      freeport
+#
+#      The output will be a number in the range specified in file
+#      ~/.container_ports by variables: FREE_PORT_FROM, FREE_PORT_TO
+#
+# Also freeport can be claimed by remote access to the container host as:
+#
+#      ssh duser@localhost -x "./.container_manager; PORT=$(freeport)"
+#
+# Author: Riccardo Bruno <riccardo.bruno@ct.infn.it>
+#
+
+# Total number of allowed containers
+export CM_MAX_ALLOWED_CONTAINERS=300
+# Container registry holding specific container limits by their names
+export CM_CONTAINER_REGISTRY="$HOME/.container_registry"
+
+# Min function
+# Arguments:
+#   $1 - First number
+#   $2 - Second number
+# Return:
+#   output: Minimum between given first and second number
+min() {
+  A="$1" && [ "$A" = "" ] && A=0
+  B="$2" && [ "$B" = "" ] && B=0
+  A=$((1*$1))
+  B=$((1*$2))
+  [ $A -lt $B ] &&\
+     echo $A ||\
+     echo $B 
+}
+export -f min
+
+# Retrieve container info from the registry
+# Arguments:
+#   $1 - container name
+# Return:
+#    output-  Maximum number of containers for the given instance or 0 if no
+#             match is found
+container_info() {
+  CM_CONTAINER_NAME="$1"
+  [ -f $CM_CONTAINER_REGISTRY\
+    -a $CM_CONTAINER_NAME != "" ] &&\
+    cat $CM_CONTAINER_REGISTRY |\
+        grep $CM_CONTAINER_NAME |\
+        awk '{ print $2 }' |\
+	xargs echo ||\
+    echo 0    
+}
+export -f container_info
+
+# Overall running containers or of the given container prefixed name
+# Arguments:
+#   $1 - Container matching string (optional)
+# Return:
+#   output - Number of running containers in the system
+running_containers() {
+  CM_CONTAINER_PREFIX="$1"
+  if [ "$CM_CONTAINER_PREFIX" != "" ]; then
+    docker ps -a | grep $CM_CONTAINER_PREFIX | wc -l | xargs echo 
+  else
+    docker ps -a | grep -v CONTAINER | wc -l | xargs echo 
+  fi
+}
+export -f running_containers
+
+# Request containers
+#
+# Arguments:
+#   $1 - container name (mandatory)
+#        It has to match an entry into the registry
+#   $2 - number of containers requested (mandatory)
+# Return:
+#   output: Number of containers allowed
+request_containers() {
+  CM_CONTAINER_NAME="$1"
+  CM_CONTAINER_REQUEST="$2"
+  CM_RUNNING_CONTAINERS=$(running_containers)
+  CM_RUNNING_INSTANCES=$(running_containers "$CM_CONTAINER_NAME")
+  CM_FREE_SLOTS=$((CM_MAX_ALLOWED_CONTAINERS-CM_RUNNING_CONTAINERS))
+  # There are no free slots at all (saturated)
+  [ $CM_FREE_SLOTS -le 0 ] &&\
+     echo 0 &&\
+     return 1
+  # Get resource specific limits in MAX_CONTAINERS adapting request to that
+  # limit, then subtract running instances
+  MAX_CONTAINERS=$(container_info "$CM_CONTAINER_NAME")
+  MAX_CONTAINERS=$((MAX_CONTAINERS-$CM_RUNNING_INSTANCES))
+  CM_CONTAINER_REQUEST=$(min "$MAX_CONTAINERS" "$CM_CONTAINER_REQUEST")
+  CM_ALLOWED_COUNT=$(min "$CM_FREE_SLOTS" "$CM_CONTAINER_REQUEST")
+  [ $CM_ALLOWED_COUNT -gt 0 ] &&\
+    echo $CM_ALLOWED_COUNT ||\
+    echo 0
+  return 0
+}
+export -f request_containers
+
+# Free port
+#
+# Arguments:
+#  (none)
+# Return:
+#  output: Free available port number
+freeport() {
+  # Name of the free port directory used to keep port booking
+  FREEPORT_DIR=$HOME/.preq
+  # Maximum amount of minutes the port results locked after a successful request
+  FREEPORT_MAX_AGE=3
+
+  # freeport needs a special directory used to hold port bookings
+  mkdir -p $FREEPORT_DIR
+  
+  # First of all remove older port request files
+  rm -f $(find $FREEPORT_DIR -maxdepth 1 -mmin +$FREEPORT_MAX_AGE -type f)
+  
+  # Seek for a free port
+  source $HOME/.container_ports
+  MAX_PORTS=$((FREE_PORT_TO+1))
+  for i in $(seq  $FREE_PORT_FROM $MAX_PORTS); do
+    [ "$( sudo netstat -plnt | grep tcp | grep ':::' | awk '{ print $4 }' | sed s/:::// | grep $i)" = "" ] &&\
+    [ ! -f "$FREEPORT_DIR/$i" ] &&\
+      break
+  done
+  [ $i -lt $MAX_PORTS ] &&\
+    FREE_PORT=$i ||\
+    FREE_PORT=-1
+  [ $FREE_PORT -gt 0 ] &&\
+     touch $FREEPORT_DIR/$i &&\
+     echo $FREE_PORT &&\
+     return 0 ||\
+     return 1 
+}
+export -f freeport
+
+# Handle source or interactive cases
+[ "$0" = "$BASH_SOURCE" ] &&\
+  case $1 in
+    'request')
+      request_containers ${@:2}
+    ;;
+    'freeport')
+      freeport ${@:2}
+    ;;
+    *)
+      echo "Unhandled function: '"$1"'"
+  esac
+

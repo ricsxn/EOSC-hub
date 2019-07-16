@@ -1,0 +1,10 @@
+# Container registry includes information about dynamically created containers
+# such as: Name of the container (its prefix matching string),
+#          Maximum number of this kind of container in the system
+#
+# Author: Riccardo Bruno <riccardo.bruno@ct.infn.it>
+r-studio	30
+nl_		10
+NetLogo_	5
+oar_palms       10
+ 

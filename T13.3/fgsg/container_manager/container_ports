@@ -1,0 +1,9 @@
+# Container ports provides a range of available port numbers
+# to be assigned to Docker containers
+#
+# Author: Riccardo Bruno <riccardo.bruno@ct.infn.it>
+
+FREE_PORT_FROM=40000
+FREE_PORT_TO=49999
+
+
