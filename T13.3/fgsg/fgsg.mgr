@@ -27,6 +27,8 @@ FGTEST_NAME=fgtest
 FGLIFERAY_NAME=fgliferay
 SSHNODE=sshnode
 FGHTTPD_NAME=fghttpd
+FGINFNSGDB=infnsg_infnsgdb
+FGINFNSG=infnsg_infnsg
 
 # The startup sequence is kept by the following array
 FGSG_SEQUENCE=(
@@ -37,6 +39,8 @@ FGSG_SEQUENCE=(
   $FGLIFERAY_NAME
   $SSHNODE
   $FGHTTPD_NAME
+  $FGINFNSGDB
+  $FGINFNSG
 )
 
 # File holding temporary files used by the script
