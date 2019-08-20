@@ -104,7 +104,10 @@ fgsg_status() {
         ;;
         *)
           PRINT_STATUS="\033[31m$CNT_STATUS\033[0m"
-          [ "$CNT_RID" != "fgtest" ] &&\
+          # Skip non mandatory components
+          [ "$CNT_RID" != "$FGTEST_NAME" -a\
+            "$CNT_RID" != "$FGINFNSGDB" -a\
+            "$CNT_RID" != "$FGINFNSG" ] &&\
             CHECK_RET=$((CHECK_RET+1))
       esac
       printf "%20s (%12s) ... ["$PRINT_STATUS"]\n" $CNT_NAME $CNT_ID 
@@ -135,7 +138,7 @@ fgsg_start() {
     echo -e $START_STATE
   done
   # fgapiserver_test needs a special fgapiserver startup sequence
-  CMDS=$(mktemp)
+  CMDS=$(tempfile)
   if [ -f "$CMDS" ]; then
     cat >$CMDS <<EOF
 screen -wipe
@@ -150,13 +153,13 @@ screen -S fgapiserver\
            read answer;\
         done'
 EOF
-    fgsg_check >/dev/null 2>&1
+    fgsg_status >/dev/null 2>&1
     if [ -f $FGSG_CONTAINERS ]; then
-      CNT_ID=$(cat $FGSG_CONTAINERS | grep fgapiserver_test)
+      CNT_ID=$(cat $FGSG_CONTAINERS | grep $FGAPISERVER_NAME)
       if [ "$CNT_ID" != "" ]; then
         while read cmd; do
           SCREEN_CMD="docker exec $CNT_ID $cmd"
-          printf "Starting screen session in fgapiserver_test ... "
+          printf "Starting screen session in $FGAPISERVER_NAME ... "
           eval $SCREEN_CMD >/dev/null 2>&1
           [ $? -ne 0 ] &&\
             START_RET=$((START_RET+1)) &&\
@@ -164,7 +167,6 @@ EOF
             START_STATE="\033[32mdone\033[0m"
           echo -e $START_STATE
         done < $CMDS
-        rm -f $CMDS
       else
         err_msg="Could not determine fgapiserver_test container"
         return 1
@@ -200,10 +202,10 @@ fgsg_stop() {
   [ $STOP_FLAG -eq 0 ] &&\
     echo "Stop operation has been aborted" &&\
     return 1
-  # use output if fgsg_check to stop running containers
-  FGSG_RUNNING_CONTAINERS=$(mktemp)
+  # use output if fgsg_status to stop running containers
+  FGSG_RUNNING_CONTAINERS=$(tempfile)
   if [ -f "$FGSG_RUNNING_CONTAINERS" ]; then
-    fgsg_check | grep running > $FGSG_RUNNING_CONTAINERS
+    fgsg_status | grep running > $FGSG_RUNNING_CONTAINERS
     CNT_IDS=()
     while read cnt_info; do
       CNT_ID=$(echo $cnt_info |\
@@ -225,7 +227,6 @@ fgsg_stop() {
         STOP_STATE="\033[31mfailed\033[0m"
       echo -e $STOP_STATE
     done
-    rm -f $FGSG_RUNNING_CONTAINERS
     return 0
   else
     err_msg="No temporary files available"
@@ -349,7 +350,7 @@ fgsg_tests() {
           TEST_STATE="\033[32mdone\033[0m" ||\
           TEST_STATE="\033[31mfailed\033[0m"
       else
-	TEST_STATE="\033[33mmissing\033[0m"
+        TEST_STATE="\033[33mmissing\033[0m"
       fi
        echo -e "[$TEST_STATE]"
     done
