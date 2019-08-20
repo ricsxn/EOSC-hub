@@ -1,0 +1,343 @@
+#!/bin/bash
+#
+# FutureGateway ScienceGateway Manager
+#
+# FGSG needs to be handled manually; this script helps to manage FGSG nodes
+
+#
+# Author: Riccardo Bruno <riccardo.bruno@ct.infn.it>
+#
+
+trap cleanup EXIT
+
+FGDB_NAME=fgdb
+FGAPISERVER_NAME=fgapiserver_test
+FGAPISERVERDAEMON_NAME=apiserverdaemon
+FGTEST_NAME=fgtest
+FGLIFERAY_NAME=fgliferay
+SSHNODE=sshnode
+FGHTTPD_NAME=fghttpd
+
+FGSG_SEQUENCE=(
+  $FGDB_NAME
+  $FGAPISERVER_NAME
+  $FGAPISERVERDAEMON_NAME
+  $FGTEST_NAME
+  $FGLIFERAY_NAME
+  $SSHNODE
+  $FGHTTPD_NAME
+)
+
+cleanup() {
+  rm -f $FGSG_CONTAINERS
+}
+
+get_containers() {
+  FGSG_CONTAINERS=$(mktemp)
+  if [ -f "$FGSG_CONTAINERS" ]; then
+    for cnt_name in ${FGSG_SEQUENCE[@]}; do
+      CNT_ID=$(docker ps -a | grep $cnt_name | awk '{ print $1 }')
+      echo "$cnt_name $CNT_ID" >> $FGSG_CONTAINERS
+    done
+    rm -f $DOCKER_PS
+    return 0
+  else
+    err_msg="No temporary files available"
+    return 1
+  fi
+}
+
+fgsg_check() {
+  CHECK_RET=0
+  get_containers
+  if [ -f "$FGSG_CONTAINERS" ]; then
+    while read cnt; do
+      CNT_RID=$(echo $cnt | awk '{ print $1 }')
+      CNT_ID=$(echo $cnt | awk '{ print $2 }')
+      CNT_NAME=$(docker inspect $CNT_ID |\
+                 jq '.[].Name' |\
+                 tr -d '/' |\
+                 xargs echo)
+      CNT_STATUS=$(docker inspect $CNT_ID |\
+                   jq '.[].State.Status' |\
+                   xargs echo)
+      case $CNT_STATUS in
+        'running')
+          PRINT_STATUS="\033[32mrunning\033[0m"
+        ;;
+        *)
+          PRINT_STATUS="\033[31m$CNT_STATUS\033[0m"
+          [ "$CNT_RID" != "fgtest" ] &&\
+            CHECK_RET=$((CHECK_RET+1))
+      esac
+      printf "%20s (%12s) ... ["$PRINT_STATUS"]\n" $CNT_NAME $CNT_ID 
+    done < $FGSG_CONTAINERS
+    return $CHECK_RET
+  else
+    err_msg="No continers information available"
+    return 1
+  fi
+}
+
+fgsg_start() {
+  START_RET=0
+  # startup must follow the component sequence order
+  for cnt_name in ${FGSG_SEQUENCE[@]}; do
+    CNT_ID=$(docker ps -a | grep $cnt_name | awk '{ print $1 }')
+    printf "Starting %20s ... " $cnt_name
+    docker container start $CNT_ID >/dev/null 2>&1
+    [ $? -ne 0 ] &&\
+      START_RET=$((START_RET+1)) &&\
+      START_STATE="\033[32mdone\033[0m" ||\
+      START_STATE="\033[31mfailed\033[0m"
+    echo -e $START_STATE
+  done
+  # fgapiserver_test needs a special fgapiserver startup sequence
+  CMDS=$(mktemp)
+  if [ -f "$CMDS" ]; then
+    cat >$CMDS <<EOF
+screen -wipe
+screen -S fgapiserver\
+       -dm /bin/bash -c\
+       'while [ 1 ]; do\
+           flask run --host=0.0.0.0 --port=80;\
+           printf "fgAPIServer flask program has terminated maybe due to a ";\
+           printf "problem. ";\
+           printf "Press <ENTER> to re-execute the API server, or ";\
+           printf "<CTRL>-C to interrupt this screen session.\n";\
+           read answer;\
+        done'
+EOF
+    fgsg_check >/dev/null 2>&1
+    if [ -f $FGSG_CONTAINERS ]; then
+      CNT_ID=$(cat $FGSG_CONTAINERS | grep fgapiserver_test)
+      if [ "$CNT_ID" != "" ]; then
+        while read cmd; do
+          SCREEN_CMD="docker exec $CNT_ID $cmd"
+          printf "Starting screen session in fgapiserver_test ... "
+          eval $SCREEN_CMD >/dev/null 2>&1
+          [ $? -ne 0 ] &&\
+            START_RET=$((START_RET+1)) &&\
+            START_STATE="\033[31mfailed\033[0m" ||\
+            START_STATE="\033[32mdone\033[0m"
+          echo -e $START_STATE
+        done < $CMDS
+        rm -f $CMDS
+      else
+        err_msg="Could not determine fgapiserver_test container"
+        return 1
+      fi
+    else
+      err_msg="Unable to retrieve information about FGSG services"
+      return 1
+    fi
+  else
+    err_msg="No temporary files available"
+    return 1
+  fi
+  return $START_RET
+}
+
+fgsg_stop() {
+  # Ask for confirmation about this danger operation unless silent operation
+  # is requested with the -f option
+  FORCE_OPT=$(echo "$@" | grep -w  "\-f")
+  if [ "$FORCE_OPT" = "" ]; then
+    printf "Are you sure to stop (ALL) FGSG components? "
+    printf "(Type 'yes' to proceed): "
+    read answer
+    [ "$answer" = "yes" ] &&\
+      STOP_FLAG=1 ||\
+      STOP_FLAG=0
+  else
+    STOP_FLAG=1
+  fi
+  [ $STOP_FLAG -eq 0 ] &&\
+    echo "Stop operation has been aborted" &&\
+    return 1
+  # use output if fgsg_check to stop running containers
+  FGSG_RUNNING_CONTAINERS=$(mktemp)
+  if [ -f "$FGSG_RUNNING_CONTAINERS" ]; then
+    fgsg_check | grep running > $FGSG_RUNNING_CONTAINERS
+    CNT_IDS=()
+    while read cnt_info; do
+      CNT_ID=$(echo $cnt_info |\
+               awk -F'(' '{ print $2 }' |\
+               awk -F')' '{ print $1 }' |\
+               xargs echo)
+      CNT_IDS+=(${CNT_ID})
+    done < $FGSG_RUNNING_CONTAINERS
+    # Stop containers in reverse order
+    for i in $(seq ${#CNT_IDS[@]} -1 1); do
+      j=$((i-1))
+      CNT_NAME=$(cat $FGSG_RUNNING_CONTAINERS |\
+                 grep ${CNT_IDS[$j]} |\
+                 awk '{ print $1 }')
+      printf "Stopping %20s ... " $CNT_NAME
+      docker container stop ${CNT_IDS[$j]}
+      [ $? -eq 0 ] &&\
+        STOP_STATE="\033[32mdone\033[0m" ||\
+        STOP_STATE="\033[31mfailed\033[0m"
+      echo -e $STOP_STATE
+    done
+    rm -f $FGSG_RUNNING_CONTAINERS
+    return 0
+  else
+    err_msg="No temporary files available"
+    return 1
+  fi
+}
+
+fgsgmgr_usage() {
+  CMDNAME=$(basename $0)
+  cat <<EOF
+Usage: ${CMDNAME} <status|start|restart|stop|test|help>
+  status         - Retrieve the running status of FGSG components
+  start, restart - Stop any running instance and start all FGSG components in
+                   the right sequence
+  stop           - Stop FGSG components
+  test           - Test if FGSG components are working correctly
+  help           - Show this message
+EOF
+}
+
+fgsg_fgdb_test() {
+  [ "$1" != "" ] &&\
+    DBVER=$(docker exec $1\
+                   /bin/bash -lc "ASDB_OPTS=-s; asdb \"select version();\""\
+                   2>/dev/null) &&\
+    [ "$DBVER" != "" ] &&\
+    return 0 ||\
+    return 1
+}
+
+fgsg_fgapiserver_test_test() {
+  [ "$1" != "" ] &&\
+    APIRES=$(docker exec $1\
+                    /bin/bash -lc "curl -s localhost" 2>/dev/null) &&\
+    [ "$APIRES" != "" ] &&\
+    return 0 ||\
+    return 1
+}
+
+fgsg_apiserverdaemon_test() {
+  [ "$1" != "" ] &&\
+    JAVAPROC=$(docker exec $1\
+                      /bin/bash -lc "ps -ef | grep java | grep -v grep"\
+                      2>/dev/null) &&\
+    [ "$JAVAPROC" != "" ] &&\
+    return 0 ||\
+    return 1
+}
+
+fgsg_fgliferay_test() {
+  [ "$1" != "" ] &&\
+    JAVAPROC=$(docker exec $1\
+                      /bin/bash -lc "ps -ef | grep java | grep -v grep"\
+                      2>/dev/null) &&\
+    [ "$JAVAPROC" != "" ] &&\
+    return 0 ||\
+    return 1
+}
+
+fgsg_sshnode_test() {
+  [ "$1" != "" ] &&\
+    SSHD_PROC=$(docker exec $1\
+                       /bin/bash -lc "ps -ef | grep sshd | grep -v grep"\
+                       2>/dev/null) &&\
+    [ "$SSHD_PROC" != "" ] &&\
+      return 0 ||\
+      return 1
+}
+
+fgsg_fghttpd_test() {
+  [ "$1" != "" ] &&\
+    HTTPD_PROC=$(docker exec $1\
+                        /bin/bash -lc "ps -ef | grep httpd | grep -v grep"\
+                        2>/dev/null) &&\
+    [ "$HTTPD_PROC" != "" ] &&\
+      return 0 ||\
+      return 1
+}
+
+fgsg_tests() {
+  TEST_RES=0
+  TEST_RET=0
+  get_containers
+  if [ -f "$FGSG_CONTAINERS" ]; then
+    for cnt_name in ${FGSG_SEQUENCE[@]}; do
+      printf "Testing %16s component ... " $cnt_name
+      TEST_FN_NAME=fgsg_${cnt_name}_test
+      declare -f $TEST_FN_NAME > /dev/null
+      if [ $? -eq 0 ]; then
+        CNT_ID=$(cat $FGSG_CONTAINERS $cnt |\
+                 grep $cnt_name |\
+                 awk '{ print $2 }')
+        fgsg_${cnt_name}_test $CNT_ID
+        TEST_RES=$?
+        TEST_RET=$((TEST_RET+TEST_RES))
+        [ $TEST_RES -eq 0 ] &&\
+          TEST_STATE="\033[32mdone\033[0m" ||\
+          TEST_STATE="\033[31mfailed\033[0m"
+      else
+	TEST_STATE="\033[33mmissing\033[0m"
+      fi
+       echo -e "[$TEST_STATE]"
+    done
+    return $TEST_RET
+  else
+    err_msg="Unable to get FGSG containers information"
+    return 1
+  fi
+}
+
+#
+# Main code
+#
+case $1 in
+  'status')
+    fgsg_check &&\
+    RETURN_CODE=0 ||\
+    RETURN_CODE=1
+  ;;
+
+  'restart'|'start')
+    fgsg_stop &&\
+    fgsg_start &&\
+    fgsg_tests &&\
+    RETURN_CODE=0 ||\
+    RETURN_CODE=1
+  ;;
+
+  'test')
+    fgsg_tests &&\
+    RETURN_CODE=0 ||\
+    RETURN_CODE=1
+  ;;
+
+  'stop')
+    shift 1
+    fgsg_stop $@ &&\
+    RETURN_CODE=0 ||\
+    RETURN_CODE=1
+  ;;
+
+  'help')
+    fgsgmgr_usage $@ &&\
+    RETURN_CODE=0 ||\
+    RETURN_CODE=1
+  ;;
+
+  *)
+    [ "$1" != "" ] && echo "Unhandled command '"$1"'"
+    fgsgmgr_usage $@ &&\
+    RETURN_CODE=0 ||\
+    RETURN_CODE=1
+  ;;
+esac
+
+[ "$err_msg" != "" ] &&
+  echo "ERROR: '"$err_msg"'"
+
+exit $RETURN_CODE
+
