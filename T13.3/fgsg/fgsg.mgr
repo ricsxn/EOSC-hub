@@ -19,16 +19,17 @@
 trap cleanup EXIT
 
 # Names of the FGSG components
-# Thes names are used as selection 'patterns'
-FGDB_NAME=fgdb
-FGAPISERVER_NAME=fgapiserver_test
-FGAPISERVERDAEMON_NAME=apiserverdaemon
-FGTEST_NAME=fgtest
-FGLIFERAY_NAME=fgliferay
-SSHNODE=sshnode
-FGHTTPD_NAME=fghttpd
-FGINFNSGDB=infnsg_infnsgdb
-FGINFNSG=infnsg_infnsg
+# Thes names are used as selection 'patterns', however it is recommended to
+# use the exact container name to avoid multiple selections
+FGDB_NAME=fgdb_0.1
+FGAPISERVER_NAME=fgapiserver_test_0.1
+FGAPISERVERDAEMON_NAME=apiserverdaemon_0.1
+FGTEST_NAME=fgtest_0.1
+FGLIFERAY_NAME=fgliferay_0.1
+SSHNODE=sshnode_0.1
+FGHTTPD_NAME=fghttpd_0.1
+FGINFNSGDB=infnsg_infnsgdb_1
+FGINFNSG=infnsg_infnsg_1
 
 # The startup sequence is kept by the following array
 FGSG_SEQUENCE=(
@@ -85,7 +86,7 @@ get_containers() {
 # Retrieve the status of the FGSG components
 fgsg_status() {
   CHECK_RET=0
-  get_containers
+  get_containers >/dev/null 2>&1
   if [ -f "$FGSG_CONTAINERS" ]; then
     while read cnt; do
       CNT_RID=$(echo $cnt | awk '{ print $1 }')
@@ -254,10 +255,10 @@ EOF
 # fgsg_<fgcomponent>_test where fgcomponent is the name ised in the
 # FGSG_SEQUENCE variable
 
-# Test for fgdb component
+# Test for fgdb component_0.1
 # It verifies that mysql client is capable to get the DB version
 # using the FG asdb function
-fgsg_fgdb_test() {
+fgsg_fgdb_0.1_test() {
   [ "$1" != "" ] &&\
     DBVER=$(docker exec $1\
                    /bin/bash -lc "ASDB_OPTS=-s; asdb \"select version();\""\
@@ -267,9 +268,9 @@ fgsg_fgdb_test() {
     return 1
 }
 
-# Test for fgapiserver_test
+# Test for fgapiserver_test_0.1
 # This test verifies that Flask answers to the API call: /
-fgsg_fgapiserver_test_test() {
+fgsg_fgapiserver_test_0.1_test() {
   [ "$1" != "" ] &&\
     APIRES=$(docker exec $1\
                     /bin/bash -lc "curl -s localhost" 2>/dev/null) &&\
@@ -278,9 +279,9 @@ fgsg_fgapiserver_test_test() {
     return 1
 }
 
-# Test for apiserverdaemon
+# Test for apiserverdaemon_0.1
 # This test verifies that a java process is running
-fgsg_apiserverdaemon_test() {
+fgsg_apiserverdaemon_0.1_test() {
   [ "$1" != "" ] &&\
     JAVAPROC=$(docker exec $1\
                       /bin/bash -lc "ps -ef | grep java | grep -v grep"\
@@ -290,9 +291,9 @@ fgsg_apiserverdaemon_test() {
     return 1
 }
 
-# Test for fgliferay
+# Test for fgliferay_0.1
 # This test verifies that a java process is running
-fgsg_fgliferay_test() {
+fgsg_fgliferay_0.1_test() {
   [ "$1" != "" ] &&\
     JAVAPROC=$(docker exec $1\
                       /bin/bash -lc "ps -ef | grep java | grep -v grep"\
@@ -302,9 +303,9 @@ fgsg_fgliferay_test() {
     return 1
 }
 
-# Test for sshnode
+# Test for sshnode_0.1
 # This test verifies that an ssh daemon process is running
-fgsg_sshnode_test() {
+fgsg_sshnode_0.1_test() {
   [ "$1" != "" ] &&\
     SSHD_PROC=$(docker exec $1\
                        /bin/bash -lc "ps -ef | grep sshd | grep -v grep"\
@@ -314,9 +315,9 @@ fgsg_sshnode_test() {
       return 1
 }
 
-# Test for fghttpd
+# Test for fghttpd_0.1
 # This test verifies that the apache httpd service is running
-fgsg_fghttpd_test() {
+fgsg_fghttpd_0.1_test() {
   [ "$1" != "" ] &&\
     HTTPD_PROC=$(docker exec $1\
                         /bin/bash -lc "ps -ef | grep httpd | grep -v grep"\
@@ -331,10 +332,10 @@ fgsg_fghttpd_test() {
 fgsg_tests() {
   TEST_RES=0
   TEST_RET=0
-  get_containers
+  get_containers >/dev/null 2>&1
   if [ -f "$FGSG_CONTAINERS" ]; then
     for cnt_name in ${FGSG_SEQUENCE[@]}; do
-      printf "Testing %16s component ... " $cnt_name
+      printf "Testing %20s component ... " $cnt_name
       TEST_FN_NAME=fgsg_${cnt_name}_test
       declare -f $TEST_FN_NAME > /dev/null
       if [ $? -eq 0 ]; then
