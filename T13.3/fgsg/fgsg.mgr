@@ -3,13 +3,23 @@
 # FutureGateway ScienceGateway Manager
 #
 # FGSG needs to be handled manually; this script helps to manage FGSG nodes
-
+#
+# Current FGSG implementation uses Docker containers created by the
+# 'run' rule of the Makefile available at fgSetup/docker/<fgcomponent> dir.
+# The Makefile run rule uses the --add-host to configure the /etc/hosts
+# file of each FG node. For this reason it is important that the FG service
+# startup sequence has to be the same as in the 1st run.
+# The use of /etc/hosts configuration is unnecessary since Docker can
+# solve automatially host names for containers operating in the same
+# network.
 #
 # Author: Riccardo Bruno <riccardo.bruno@ct.infn.it>
 #
 
 trap cleanup EXIT
 
+# Names of the FGSG components
+# Thes names are used as selection 'patterns'
 FGDB_NAME=fgdb
 FGAPISERVER_NAME=fgapiserver_test
 FGAPISERVERDAEMON_NAME=apiserverdaemon
@@ -18,6 +28,7 @@ FGLIFERAY_NAME=fgliferay
 SSHNODE=sshnode
 FGHTTPD_NAME=fghttpd
 
+# The startup sequence is kept by the following array
 FGSG_SEQUENCE=(
   $FGDB_NAME
   $FGAPISERVER_NAME
@@ -28,18 +39,38 @@ FGSG_SEQUENCE=(
   $FGHTTPD_NAME
 )
 
+# File holding temporary files used by the script
+TMP_FILES=$(mktemp)
+
+# Cleanup temporary files upon script termination
 cleanup() {
-  rm -f $FGSG_CONTAINERS
+  if [ -f $TMP_FILES ]; then
+    while read f; do
+      rm -f $f
+    done < $TMP_FILES
+    rm -f $TMP_FILES
+  fi
 }
 
+# Create a temporary file and add it to the temporary fiels  list
+tempfile() {
+  TMP=$(mktemp)
+  [ -f $TMP_FILES -a\
+    -f "$TMP" ] &&\
+    echo $TMP >> $TMP_FILES &&\
+    echo $TMP ||\
+    return 1
+}
+
+# This is an internal function creating a file made of record entries like:
+# <container_name> <container_id>
 get_containers() {
-  FGSG_CONTAINERS=$(mktemp)
+  FGSG_CONTAINERS=$(tempfile)
   if [ -f "$FGSG_CONTAINERS" ]; then
     for cnt_name in ${FGSG_SEQUENCE[@]}; do
       CNT_ID=$(docker ps -a | grep $cnt_name | awk '{ print $1 }')
       echo "$cnt_name $CNT_ID" >> $FGSG_CONTAINERS
     done
-    rm -f $DOCKER_PS
     return 0
   else
     err_msg="No temporary files available"
@@ -47,7 +78,8 @@ get_containers() {
   fi
 }
 
-fgsg_check() {
+# Retrieve the status of the FGSG components
+fgsg_status() {
   CHECK_RET=0
   get_containers
   if [ -f "$FGSG_CONTAINERS" ]; then
@@ -79,6 +111,11 @@ fgsg_check() {
   fi
 }
 
+# Start FGSG component following the same startup sequence as hold in the
+# variable: FGSG_SEQUENCE
+# Before to call this function all FGSG components must be in stopped status
+# This script also executes API server in 'test' mode, as it has been
+# created during its original startup
 fgsg_start() {
   START_RET=0
   # startup must follow the component sequence order
@@ -138,6 +175,9 @@ EOF
   return $START_RET
 }
 
+# Stop FGSG components using the opposite sequence hold by the FGSG_SEQUENCE
+# variable. If the '-f' option is not provided, the user will be prompted
+# to confirm this opreation
 fgsg_stop() {
   # Ask for confirmation about this danger operation unless silent operation
   # is requested with the -f option
@@ -188,19 +228,31 @@ fgsg_stop() {
   fi
 }
 
+# Print command usage
 fgsgmgr_usage() {
   CMDNAME=$(basename $0)
   cat <<EOF
-Usage: ${CMDNAME} <status|start|restart|stop|test|help>
+Usage: ${CMDNAME} <status|start|restart|stop|test|help> [OPTS]
   status         - Retrieve the running status of FGSG components
   start, restart - Stop any running instance and start all FGSG components in
                    the right sequence
-  stop           - Stop FGSG components
+  stop           - Stop FGSG components. Use -f option to avoid confirmation
   test           - Test if FGSG components are working correctly
   help           - Show this message
 EOF
 }
 
+#
+# Tests section
+#
+# Following functions are used to check the functionality of the FGSG
+# components. These function must be declared with the following name:
+# fgsg_<fgcomponent>_test where fgcomponent is the name ised in the
+# FGSG_SEQUENCE variable
+
+# Test for fgdb component
+# It verifies that mysql client is capable to get the DB version
+# using the FG asdb function
 fgsg_fgdb_test() {
   [ "$1" != "" ] &&\
     DBVER=$(docker exec $1\
@@ -211,6 +263,8 @@ fgsg_fgdb_test() {
     return 1
 }
 
+# Test for fgapiserver_test
+# This test verifies that Flask answers to the API call: /
 fgsg_fgapiserver_test_test() {
   [ "$1" != "" ] &&\
     APIRES=$(docker exec $1\
@@ -220,6 +274,8 @@ fgsg_fgapiserver_test_test() {
     return 1
 }
 
+# Test for apiserverdaemon
+# This test verifies that a java process is running
 fgsg_apiserverdaemon_test() {
   [ "$1" != "" ] &&\
     JAVAPROC=$(docker exec $1\
@@ -230,6 +286,8 @@ fgsg_apiserverdaemon_test() {
     return 1
 }
 
+# Test for fgliferay
+# This test verifies that a java process is running
 fgsg_fgliferay_test() {
   [ "$1" != "" ] &&\
     JAVAPROC=$(docker exec $1\
@@ -240,6 +298,8 @@ fgsg_fgliferay_test() {
     return 1
 }
 
+# Test for sshnode
+# This test verifies that an ssh daemon process is running
 fgsg_sshnode_test() {
   [ "$1" != "" ] &&\
     SSHD_PROC=$(docker exec $1\
@@ -250,6 +310,8 @@ fgsg_sshnode_test() {
       return 1
 }
 
+# Test for fghttpd
+# This test verifies that the apache httpd service is running
 fgsg_fghttpd_test() {
   [ "$1" != "" ] &&\
     HTTPD_PROC=$(docker exec $1\
@@ -260,6 +322,8 @@ fgsg_fghttpd_test() {
       return 1
 }
 
+# Main script for tests
+# It executes the test script avove if they exist
 fgsg_tests() {
   TEST_RES=0
   TEST_RET=0
@@ -296,13 +360,13 @@ fgsg_tests() {
 #
 case $1 in
   'status')
-    fgsg_check &&\
+    fgsg_status &&\
     RETURN_CODE=0 ||\
     RETURN_CODE=1
   ;;
 
   'restart'|'start')
-    fgsg_stop &&\
+    fgsg_stop -f &&\
     fgsg_start &&\
     fgsg_tests &&\
     RETURN_CODE=0 ||\
