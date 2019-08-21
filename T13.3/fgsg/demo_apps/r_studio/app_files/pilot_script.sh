@@ -32,8 +32,6 @@ run_container() {
   RSTUDIO_PASS=$(date +%s | sha256sum | base64 | head -c 32) 
   CONTAINER_CMD="sudo docker run\
 	              --name r-studio-$PORT\
-                      --rm\
-                      -ti\
                       -e USER=$RSTUDIO_USER\
                       -e PASSWORD=$RSTUDIO_PASS\
                       -p $PORT:8787\
