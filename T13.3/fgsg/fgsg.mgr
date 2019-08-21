@@ -199,7 +199,7 @@ fgsg_services_start() {
         CNT_STATUS=$(docker inspect $CNT_ID |\
                      jq '.[].State.Status' |\
                      xargs echo)
-        printf "Starting %${CNT_INDENT}s ... " $CNT_NAME
+        printf "%${CNT_INDENT}s ... " $CNT_NAME
         case $CNT_STATUS in
           'running')
             START_STATUS="[\033[32mrunning\033[0m]"
@@ -209,8 +209,8 @@ fgsg_services_start() {
               docker container start $CNT_ID ||\
             echo "" >/dev/null 2>&1
             [ $? -eq 0 ] &&\
-              START_STATUS="[\033[32mdone\033[0m]" ||\
-              START_STATUS="[\033[31mfailed\033[0m]"
+              START_STATUS="[\033[32mstarted\033[0m]" ||\
+              START_STATUS="[\033[31mstart failed\033[0m]"
             START_RET=$((CHECK_RET+1))
         esac
         echo -e $START_STATUS 
@@ -243,14 +243,14 @@ fgsg_start() {
     # startup must follow the component sequence order
     for cnt_name in ${FGSG_SEQUENCE[@]}; do
       CNT_ID=$(docker ps -a | grep $cnt_name | awk '{ print $1 }')
-      printf "Starting \033[0;37m%${CNT_INDENT}s\033[0m ... " $cnt_name
+      printf "\033[0;37m%${CNT_INDENT}s\033[0m ... " $cnt_name
       [ "$DRYRUN_OPT" = "" ] &&\
         docker container start $CNT_ID >/dev/null 2>&1 ||\
         echo "" >/dev/null 2>&1
       [ $? -ne 0 ] &&\
         START_RET=$((START_RET+1)) &&\
-        START_STATE="[\033[31mfailed\033[0m]" ||\
-        START_STATE="[\033[32mdone\033[0m]"
+        START_STATE="[\033[31mstart failed\033[0m]" ||\
+        START_STATE="[\033[32mstarted\033[0m]"
       echo -e $START_STATE
     done
     # fgapiserver_test needs a special fgapiserver startup sequence
@@ -277,7 +277,7 @@ EOF
                    awk '{ print $1 }' |\
                    xargs echo)
         if [ "$CNT_ID" != "" ]; then
-    printf "Config   \033[0;37m%${CNT_INDENT}s\033[0m ... " $CNT_NAME
+    printf "\033[0;37m%${CNT_INDENT}s\033[0m ... " $CNT_NAME
     SCREEN_RET=0
           while read cmd; do
             SCREEN_CMD="docker exec $CNT_ID $cmd"
@@ -289,8 +289,8 @@ EOF
           done < $CMDS
     [ $SCREEN_RET -ne 0 ] &&\
       START_RET=$((START_RET+1)) &&\
-            SCREEN_STATE="[\033[31mfailed\033[0m]" ||\
-            SCREEN_STATE="[\033[32mdone\033[0m]"
+            SCREEN_STATE="[\033[31mconf failed\033[0m]" ||\
+            SCREEN_STATE="[\033[32mconfigured\033[0m]"
     echo -e $SCREEN_STATE
         else
           err_msg="Could not determine fgapiserver_test container"
@@ -364,13 +364,13 @@ fgsg_stop() {
       CNT_NAME=$(cat $FGSG_RUNNING_CONTAINERS |\
                  grep ${CNT_IDS[$j]} |\
      awk '{ print $1}')
-      printf "Stopping \033[0;37m%${CNT_INDENT}s\033[0m ... " $CNT_NAME
+      printf "\033[0;37m%${CNT_INDENT}s\033[0m ... " $CNT_NAME
       [ "$DRYRUN_OPT" = "" ] &&\
         docker container stop ${CNT_IDS[$j]} ||\
   echo "" >/dev/null 2>&1
       [ $? -eq 0 ] &&\
-        STOP_STATE="[\033[32mdone\033[0m]" ||\
-        STOP_STATE="[\033[31mfailed\033[0m]"
+        STOP_STATE="[\033[32mstopped\033[0m]" ||\
+        STOP_STATE="[\033[31mstop failed\033[0m]"
       echo -e $STOP_STATE
     done
     return 0
