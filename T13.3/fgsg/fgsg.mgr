@@ -58,6 +58,12 @@ CNT_INDENT=50
 # File holding temporary files used by the script
 TMP_FILES=$(mktemp)
 
+# Disable danger operations, keep it empty to enable real operations
+# To disable danger operations use a string like: 'echo disabled.'
+# It is important the string start with a command having return code == 0
+# otherwise danger operations will be reported as failed
+SAFE_PREFIX=""
+
 # Cleanup temporary files upon script termination
 cleanup() {
   if [ -f $TMP_FILES ]; then
@@ -170,22 +176,6 @@ fgsg_services_status() {
 # Start FGSG services
 fgsg_services_start() {
   START_RET=0
-  FORCE_OPT=$(echo "$@" | grep -w "\-f")
-  DRYRUN_OPT=$(echo "$@" | grep -w "\-d")
-  if [ "$FORCE_OPT" = "" ]; then
-    QUESTION=$(tempfile)
-    printf "Are you sure to start FGSG services? " >$QUESTION
-    printf "(Type 'yes' to proceed): " >>$QUESTION
-    confirm $QUESTION "yes"
-    [ $? -eq 0 ] &&\
-      START_FLAG=1 ||\
-      START_FLAG=0
-  else
-    START_FLAG=1
-  fi
-  [ $START_FLAG -eq 0 ] &&\
-    echo "Start services operation has been aborted" &&\
-    return 1
   FGSG_SRV_CONTAINERS=$(tempfile)
   for srv_name in ${FGSG_SERVICES[@]}; do
     if [ -f $FGSG_SRV_CONTAINERS ]; then
@@ -206,7 +196,7 @@ fgsg_services_start() {
           ;;
           *)
             [ "$DRYRUN_OPT" = "" ] &&\
-              docker container start $CNT_ID ||\
+              ${SAFE_PREFIX}docker container start $CNT_ID ||\
             echo "" >/dev/null 2>&1
             [ $? -eq 0 ] &&\
               START_STATUS="[\033[32mstarted\033[0m]" ||\
@@ -230,7 +220,6 @@ fgsg_services_start() {
 # created during its original startup
 fgsg_start() {
   START_RET=0
-  DRYRUN_OPT=$(echo "$@" | grep -w "\-d")
   FGSG_RUNNING_CONTAINERS=$(tempfile)
   if [ -f "$FGSG_RUNNING_CONTAINERS" ]; then
     fgsg_status |\
@@ -245,7 +234,7 @@ fgsg_start() {
       CNT_ID=$(docker ps -a | grep $cnt_name | awk '{ print $1 }')
       printf "\033[0;37m%${CNT_INDENT}s\033[0m ... " $cnt_name
       [ "$DRYRUN_OPT" = "" ] &&\
-        docker container start $CNT_ID >/dev/null 2>&1 ||\
+        ${SAFE_PREFIX}docker container start $CNT_ID >/dev/null 2>&1 ||\
         echo "" >/dev/null 2>&1
       [ $? -ne 0 ] &&\
         START_RET=$((START_RET+1)) &&\
@@ -277,21 +266,21 @@ EOF
                    awk '{ print $1 }' |\
                    xargs echo)
         if [ "$CNT_ID" != "" ]; then
-    printf "\033[0;37m%${CNT_INDENT}s\033[0m ... " $CNT_NAME
-    SCREEN_RET=0
+          printf "\033[0;37m%${CNT_INDENT}s\033[0m ... " $CNT_NAME
+          SCREEN_RET=0
           while read cmd; do
             SCREEN_CMD="docker exec $CNT_ID $cmd"
             [ "$DRYRUN_OPT" = "" ] &&\
-              eval $SCREEN_CMD >/dev/null 2>&1 ||\
-        echo "" >/dev/null 2>&1
+              ${SAFE_PREFIX}eval $SCREEN_CMD >/dev/null 2>&1 ||\
+              echo "" >/dev/null 2>&1
             [ $? -ne 0 ] &&\
               SCREEN_RET=$((SCREEN_RET+1))
           done < $CMDS
-    [ $SCREEN_RET -ne 0 ] &&\
-      START_RET=$((START_RET+1)) &&\
+          [ $SCREEN_RET -ne 0 ] &&\
+            START_RET=$((START_RET+1)) &&\
             SCREEN_STATE="[\033[31mconf failed\033[0m]" ||\
             SCREEN_STATE="[\033[32mconfigured\033[0m]"
-    echo -e $SCREEN_STATE
+          echo -e $SCREEN_STATE
         else
           err_msg="Could not determine fgapiserver_test container"
           return 1
@@ -311,38 +300,50 @@ EOF
   return $START_RET
 }
 
-# Ask for confirmation, it uses the given file to prompt the question
-confirm() {
-    cat $1
-    ANSWER=$2
-    read answer
-    [ "$answer" = "${ANSWER}" ] &&\
-      return 0 ||\
+# Stop FGSG services
+fgsg_services_stop() {
+  STOP_RET=0
+  FGSG_SRV_CONTAINERS=$(tempfile)
+  for srv_name in ${FGSG_SERVICES[@]}; do
+    if [ -f $FGSG_SRV_CONTAINERS ]; then
+      docker ps -a | grep $srv_name > $FGSG_SRV_CONTAINERS
+      while read srv_record; do
+        CNT_ID=$(echo $srv_record | awk '{ print $1 }' | xargs echo)
+        CNT_NAME=$(docker inspect $CNT_ID |\
+                   jq '.[].Name' |\
+                   tr -d '/' |\
+                   xargs echo)
+        CNT_STATUS=$(docker inspect $CNT_ID |\
+                     jq '.[].State.Status' |\
+                     xargs echo)
+        printf "%${CNT_INDENT}s ... " $CNT_NAME
+        case $CNT_STATUS in
+          'running')
+            [ "$DRYRUN_OPT" = "" ] &&\
+              ${SAFE_PREFIX}docker container stop $CNT_ID ||\
+            echo "" >/dev/null 2>&1
+            [ $? -ne 0 ] &&\
+              START_STATUS="[\033[31mstop failed\033[0m]" &&\
+              STOP_RET=$((CHECK_RET+1)) ||\
+              START_STATUS="[\033[32mstopped\033[0m]"
+          ;;
+          *)
+            START_STATUS="[\033[32m$CNT_STATUS\033[0m]"
+        esac
+        echo -e $START_STATUS 
+      done < $FGSG_SRV_CONTAINERS
+    else
+      err_msg="No temporary file avaialable"
       return 1
+    fi
+  done
+  return $STOP_RET
 }
 
 # Stop FGSG components using the opposite sequence hold by the FGSG_SEQUENCE
 # variable. If the '-f' option is not provided, the user will be prompted
 # to confirm this opreation
 fgsg_stop() {
-  # Ask for confirmation about this danger operation unless silent operation
-  # is requested with the -f option
-  FORCE_OPT=$(echo "$@" | grep -w "\-f")
-  DRYRUN_OPT=$(echo "$@" | grep -w "\-d")
-  if [ "$FORCE_OPT" = "" ]; then
-    QUESTION=$(tempfile)
-    printf "Are you sure to stop (ALL) FGSG components? " >$QUESTION
-    printf "(Type 'yes' to proceed): " >>$QUESTION
-    confirm $QUESTION "yes"
-    [ $? -eq 0 ] &&\
-      STOP_FLAG=1 ||\
-      STOP_FLAG=0
-  else
-    STOP_FLAG=1
-  fi
-  [ $STOP_FLAG -eq 0 ] &&\
-    echo "Stop operation has been aborted" &&\
-    return 1
   # use output if fgsg_status to stop running containers
   FGSG_RUNNING_CONTAINERS=$(tempfile)
   if [ -f "$FGSG_RUNNING_CONTAINERS" ]; then
@@ -366,8 +367,8 @@ fgsg_stop() {
      awk '{ print $1}')
       printf "\033[0;37m%${CNT_INDENT}s\033[0m ... " $CNT_NAME
       [ "$DRYRUN_OPT" = "" ] &&\
-        docker container stop ${CNT_IDS[$j]} ||\
-  echo "" >/dev/null 2>&1
+        ${SAFE_PREFIX}docker container stop ${CNT_IDS[$j]} ||\
+        echo "" >/dev/null 2>&1
       [ $? -eq 0 ] &&\
         STOP_STATE="[\033[32mstopped\033[0m]" ||\
         STOP_STATE="[\033[31mstop failed\033[0m]"
@@ -380,6 +381,31 @@ fgsg_stop() {
   fi
 }
 
+# Process command line options
+fgsgmgr_options() {
+  # Get options
+  FORCE_OPT=$(echo "$@" | grep -w "\-f")
+  DRYRUN_OPT=$(echo "$@" | grep -w "\-d")
+  return 0
+}
+
+# Process options and get confirmation
+fgsgrgr_confirm() {
+  # Ask for confirmation if operation is not forced -f
+  if [ "$FORCE_OPT" = "" ]; then
+    #confirm $QUESTION $ANSWER
+    cat $1
+    ANSWER=$2
+    read answer
+    [ "$answer" != "${ANSWER}" ] &&\
+      echo "Operation has been aborted" &&\
+      return 1 ||\
+      return 0
+  else
+    return 0
+  fi
+}
+
 # Print command usage
 fgsgmgr_usage() {
   CMDNAME=$(basename $0)
@@ -389,7 +415,8 @@ Usage: ${CMDNAME} <status|start|restart|stop|test|help> [OPTS]
                    services
   start, restart - Stop any running instance and start all FGSG components in
                    the right sequence. It executes services if necessary
-  srv_start      - Start services that are not running
+  srv_start      - Start FGSG services that are not running
+  srv_stop       - Stop FGSG services that are running
   stop           - Stop FGSG components and services
   test           - Test if FGSG components are working correctly
   help           - Show this message
@@ -489,7 +516,7 @@ fgsg_tests() {
   get_containers >/dev/null 2>&1
   if [ -f "$FGSG_CONTAINERS" ]; then
     for cnt_name in ${FGSG_SEQUENCE[@]}; do
-      printf "Testing \033[0;37m%${CNT_INDENT}s\033[0m component ... "\
+      printf "\033[0;37m%${CNT_INDENT}s\033[0m component ... "\
       $cnt_name
       TEST_FN_NAME=fgsg_${cnt_name}_test
       declare -f $TEST_FN_NAME > /dev/null
@@ -501,7 +528,7 @@ fgsg_tests() {
         TEST_RES=$?
         TEST_RET=$((TEST_RET+TEST_RES))
         [ $TEST_RES -eq 0 ] &&\
-          TEST_STATE="\033[32mdone\033[0m" ||\
+          TEST_STATE="\033[32msucceed\033[0m" ||\
           TEST_STATE="\033[31mfailed\033[0m"
       else
         TEST_STATE="\033[33mmissing\033[0m"
@@ -518,8 +545,12 @@ fgsg_tests() {
 #
 # Main code
 #
+QUESTION=$(tempfile)
+ANSWER="yes"
+
 case $1 in
   'status')
+    fgsgmgr_options &&\
     fgsg_status &&\
     fgsg_services_status &&\
     RETURN_CODE=0 ||\
@@ -527,15 +558,36 @@ case $1 in
   ;;
 
   'restart'|'start')
+    printf "Are you sure to $1 FGSG components and services? " >$QUESTION
+    printf "(Type 'yes' to proceed): " >>$QUESTION
+    shift 1
+    fgsgmgr_options $@ &&\
+    fgsgrgr_confirm $QUESTION $ANSWER &&\
     fgsg_stop  $@ &&\
     fgsg_start $@ &&\
-    fgsg_services_start -f $@ &&\
+    fgsg_services_start $@ &&\
     RETURN_CODE=0 ||\
     RETURN_CODE=1
   ;;
 
   'srv_start')
+    printf "Are you sure to start FGSG services? " >$QUESTION
+    printf "(Type 'yes' to proceed): " >>$QUESTION
+    shift 1
+    fgsgmgr_options $@ &&\
+    fgsgrgr_confirm $QUESTION $ANSWER &&\
     fgsg_services_start $@ &&\
+    RETURN_CODE=0 ||
+    RETURN_CODE=1
+  ;;
+
+  'srv_stop')
+    printf "Are you sure to stop FGSG servics? " >$QUESTION
+    printf "(Type 'yes' to proceed): " >>$QUESTION
+    shift 1
+    fgsgmgr_options $@ &&\
+    fgsgrgr_confirm $QUESTION $ANSWER &&\
+    fgsg_services_stop $@ &&\
     RETURN_CODE=0 ||
     RETURN_CODE=1
   ;;
@@ -547,14 +599,19 @@ case $1 in
   ;;
 
   'stop')
+    printf "Are you sure to stop (ALL) FGSG components? " >$QUESTION
+    printf "(Type 'yes' to proceed): " >>$QUESTION
     shift 1
+    fgsgmgr_options $@ &&\
+    fgsgrgr_confirm $QUESTION $ANSWER &&\
+    fgsg_services_stop $@ &&\
     fgsg_stop $@ &&\
     RETURN_CODE=0 ||\
     RETURN_CODE=1
   ;;
 
   'help')
-    fgsgmgr_usage $@ &&\
+    fgsgmgr_usage &&\
     RETURN_CODE=0 ||\
     RETURN_CODE=1
   ;;
