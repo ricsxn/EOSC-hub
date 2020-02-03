@@ -15,6 +15,20 @@
     window.open(uri);
   }
 </script>
+<script>
+  function SendLinkByMail2(href) {
+    var subject= "Science software on demand: Support";
+    var mail_address = "fgsg-join@ct.infn.it"
+    var body = "I would like to receive support on application <describe your problem>\r\n\r\n<";
+    body += window.location.href;
+    body += ">";
+    var uri = "mailto:" + mail_address + "?subject=";
+    uri += encodeURIComponent(subject);
+    uri += "&body=";
+    uri += encodeURIComponent(body);
+    window.open(uri);
+  }
+</script>
 <!--
   Carousel taken from: https://www.w3schools.com/booTsTrap/tryit.asp?filename=trybs_ref_js_carousel2&stacked=h
 -->
@@ -135,6 +149,19 @@
       </tr>
     </tbody>
   </table>
-</center>
 
-<p>&nbsp;</p>
+  <table border="0" cellpadding="0" cellspacing="0" style="width: 90%">
+    <tbody>
+      <tr>
+        <th style="width: 50%">
+          <h3><a href="javascript:(function()%7BSendLinkByMail2()%3B%7D)()%3B">Support</a></h3>
+        </th>
+      </tr>
+      <tr>
+        <td>
+          <p>Application consistency is timely checked, for any problem it is possible to open an <a href="https://ggus.eu/?mode=ticket_submit">official ticket</a> specifying as Support Unit: ‘Applications on Demand (FGSG)’ or contacting the <a href="javascript:(function()%7BSendLinkByMail2()%3B%7D)()%3B">support staff</a>.</p>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</center>
