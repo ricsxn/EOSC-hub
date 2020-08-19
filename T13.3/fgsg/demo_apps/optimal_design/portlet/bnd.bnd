@@ -1,0 +1,4 @@
+Bundle-Name: optimal_design
+Bundle-SymbolicName: optimal_design
+Bundle-Version: 1.0.0
+Export-Package: optimal_design.constants
