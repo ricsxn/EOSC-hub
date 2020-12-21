@@ -3,9 +3,10 @@
 -->
 <script>
   function SendLinkByMail(href) {
-    var subject= "Science software on demand: Proposing";
-    var mail_address = "riccardo.bruno@ct.infn.it"
-    var body = "I would like to be contacted for the following application proposal: <briefly describe your applicatoin or use case>\r\n\r\n<";
+    var subject = "Science software on demand: Proposing";
+    var mail_address = "riccardo.bruno@ct.infn.it";
+    var body =
+      "I would like to be contacted for the following application proposal: <briefly describe your applicatoin or use case>\r\n\r\n<";
     body += window.location.href;
     body += ">";
     var uri = "mailto:" + mail_address + "?subject=";
@@ -18,71 +19,168 @@
 <!--
   Carousel taken from: https://www.w3schools.com/booTsTrap/tryit.asp?filename=trybs_ref_js_carousel2&stacked=h
 -->
-<style type="text/css">.carousel-inner > .item > img,
-.carousel-inner > .item > a > img {
-  width: 100%;
-  margin: auto;
-}
+<style type="text/css">
+  .carousel-inner > .item > img,
+  .carousel-inner > .item > a > img {
+    width: 100%;
+    margin: auto;
+  }
 </style>
-<div class="container">&nbsp;
-  <div class="carousel slide" data-ride="carousel" id="myCarousel"><!-- Indicators -->
+<div class="container">
+  &nbsp;
+  <div class="carousel slide" data-ride="carousel" id="myCarousel">
+    <!-- Indicators -->
     <ol class="carousel-indicators">
-     <li class="active" data-slide-to="0" data-target="#myCarousel">&nbsp;</li>
-     <li data-slide-to="1" data-target="#myCarousel">&nbsp;</li>
-     <li data-slide-to="2" data-target="#myCarousel">&nbsp;</li>
-   </ol>
-   <!-- Wrapper for slides -->
+      <li class="active" data-slide-to="0" data-target="#myCarousel">&nbsp;</li>
+      <li data-slide-to="1" data-target="#myCarousel">&nbsp;</li>
+      <li data-slide-to="2" data-target="#myCarousel">&nbsp;</li>
+    </ol>
+    <!-- Wrapper for slides -->
 
-   <div class="carousel-inner" role="listbox">
-    <div class="item active"><img alt="Propose" height="345" src="https://fgsg.ct.infn.it/egissod/documents/51171/0/1_prop.png/b4cdf8f1-5b6d-86d8-3f27-7b4bfb797014?t=1551349458277" width="460" />
-      <div class="carousel-caption">
-        <h3>Propose your application</h3>
+    <div class="carousel-inner" role="listbox">
+      <div class="item active">
+        <img
+          alt="Propose"
+          height="345"
+          src="https://fgsg.ct.infn.it/egissod/documents/51171/0/1_prop.png/b4cdf8f1-5b6d-86d8-3f27-7b4bfb797014?t=1551349458277"
+          width="460"
+        />
+        <div class="carousel-caption">
+          <h3>Propose your application</h3>
 
-        <p>Describe your application or describe your community use case.</p>
+          <p>Describe your application or describe your community use case.</p>
+        </div>
+      </div>
+
+      <div class="item">
+        <img
+          alt="Code"
+          height="345"
+          src="https://fgsg.ct.infn.it/egissod/documents/51171/0/2_prop.png/8e155780-ff6c-22fd-905e-2f344e0d227f?t=1551349458081"
+          width="460"
+        />
+        <div class="carousel-caption">
+          <h3>Code your application</h3>
+
+          <p>Code and test your application or use case.</p>
+        </div>
+      </div>
+
+      <div class="item">
+        <img
+          alt="Deploy"
+          height="345"
+          src="https://fgsg.ct.infn.it/egissod/documents/51171/0/3_prop.png/ccd6d01d-1128-9e12-2016-02963df6e739?t=1551349457659"
+          width="460"
+        />
+        <div class="carousel-caption">
+          <h3>Deploy</h3>
+
+          <p>
+            Deploy and execute your application with the Science Gateway
+            capabilities.
+          </p>
+        </div>
       </div>
     </div>
-
-    <div class="item"><img alt="Code" height="345" src="https://fgsg.ct.infn.it/egissod/documents/51171/0/2_prop.png/8e155780-ff6c-22fd-905e-2f344e0d227f?t=1551349458081" width="460" />
-      <div class="carousel-caption">
-        <h3>Code your application</h3>
-
-        <p>Code and test your application or use case.</p>
-      </div>
-    </div>
-
-    <div class="item"><img alt="Deploy" height="345" src="https://fgsg.ct.infn.it/egissod/documents/51171/0/3_prop.png/ccd6d01d-1128-9e12-2016-02963df6e739?t=1551349457659" width="460" />
-      <div class="carousel-caption">
-        <h3>Deploy</h3>
-
-        <p>Deploy and execute your application with the Science Gateway capabilities.</p>
-      </div>
-    </div>
+    <!-- Left and right controls -->
+    <a
+      class="left carousel-control"
+      href="#myCarousel"
+      role="button"
+      data-slide="prev"
+    >
+      <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
+      <span class="sr-only">Previous</span>
+    </a>
+    <a
+      class="right carousel-control"
+      href="#myCarousel"
+      role="button"
+      data-slide="next"
+    >
+      <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+      <span class="sr-only">Next</span>
+    </a>
   </div>
-  <!-- Left and right controls -->
-  <a class="left carousel-control" href="#myCarousel" role="button" data-slide="prev">
-    <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
-    <span class="sr-only">Previous</span>
-  </a>
-    <a class="right carousel-control" href="#myCarousel" role="button" data-slide="next">
-    <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
-    <span class="sr-only">Next</span>
-  </a></div>
 </div>
 
 <p>&nbsp;</p>
 
 <center>
   <table border="0" cellpadding="0" cellspacing="0" style="width: 90%">
-   <tbody>
-    <tr>
-     <td>
-       <p>This space provides the necessary information&nbsp;to propose your own Science Gateway interface&nbsp;in case the available applications are not suitable for your specific use case.</p>
+    <tbody>
+      <tr>
+        <td>
+          <p>
+            This space provides the necessary information&nbsp;to propose your
+            own Science Gateway interface&nbsp;in case the available
+            applications are not suitable for your specific use case.
+          </p>
 
-       <p>There are two possible supporting strategies, the first foresees the integration of your proposed application inside available applications of this site, the second the creation of a new Science Gateway solution specifically tailored for your requirements. For both approaches it is necessary to describe the application requirements, while in the second approach it is necessary also to establish a strategy plan for hosting the necessary FutureGateway services.</p>
+          <p>
+            There are two possible supporting strategies, the first foresees the
+            integration of your proposed application inside available
+            applications of this site, the second the creation of a new Science
+            Gateway solution specifically tailored for your requirements. For
+            both approaches it is necessary to describe the application
+            requirements, while in the second approach it is necessary also to
+            establish a strategy plan for hosting the necessary FutureGateway
+            services.
+          </p>
 
-       <p>To propose your application, just contact the <a href="javascript:(function()%7BSendLinkByMail()%3B%7D)()%3B">support staff</a>, starting to provide a brief description of your use case.</p>
-     </td>
-   </tr>
- </tbody>
-</table>
+          <p>
+            To propose your application, just contact the
+            <a href="javascript:(function()%7BSendLinkByMail()%3B%7D)()%3B"
+              >support staff</a
+            >, starting to provide a brief description of your use case.
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <p>
+            To get more information about this Science Gateway components, use
+            the following links:
+          </p>
+          <ul>
+            <li>
+              <a href="https://futuregatewayframework.github.io"
+                >FutureGateway Framework web site</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://futuregateway-framework.readthedocs.io/en/latest/?badge=latest"
+                >FutureGateway Documentation</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://futuregatewayframework.github.io/tutorials/fgapis.html"
+                >Future Gatway API usage tutorial</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://futuregatewayframework.github.io/tutorials/gui_liferay7.html"
+                >Science Gateway web application development tutorial</a
+              >
+            </li>
+            <li>
+              <a href="https://futuregatewayframework.github.io/news/"
+                >News on FutureGateway Framework</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://futuregatewayframework.github.io/fgf/update/2019/09/11/fgsg.html"
+                >The FutureGateway ScienceGateway infrastructure</a
+              >
+            </li>
+          </ul>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </center>
